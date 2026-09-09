@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Invoice Comparison — Invoices #8 and #9</title>
+  <title>Invoices and Work Progress</title>
   <style>
     :root{
       --ink:#050505;
@@ -20,88 +20,163 @@
       --match-sub:#e4f0e6;
       --note:#5c3b00;
       --invoice-count:2;
-      --panel:536px;
+      --panel:680px;
+      --progress:228px;
       --arrow:32px;
+      --reason-box:30px;
+      --flag:16px;
+      --question:#ffd4a8;
+      --resolved:#cfe9d4;
     }
     *{box-sizing:border-box}
     body{margin:0;color:var(--ink);background:var(--canvas);font-family:"Arial Narrow",Arial,Helvetica,sans-serif;font-variant-numeric:tabular-nums}
     .page{width:100%;min-height:100vh;overflow-x:auto;padding:8px 8px 16px}
-    .page-inner{width:max-content;margin:0 auto}
-    .notes{width:calc(var(--panel) * var(--invoice-count) + 8px);margin:0 0 7px calc(var(--arrow) + 8px);padding:5px 8px;background:#fff8e8;border:1px solid #e0c48a;color:var(--note);font-size:11px;line-height:1.35}
+    .page-inner{display:flex;flex-direction:column;width:max-content;margin:0 auto}
+    .notes{width:0;min-width:100%;margin:0 0 7px;padding:5px 8px;background:#fff8e8;border:1px solid #e0c48a;color:var(--note);font-size:11px;line-height:1.35}
     .notes strong{font-weight:700}
-    .legend{display:flex;gap:14px;flex-wrap:wrap;width:calc(var(--panel) * var(--invoice-count) + 8px);margin:0 0 6px calc(var(--arrow) + 8px);font-size:10px;color:#333}
+    .legend{display:flex;gap:14px;flex-wrap:wrap;width:0;min-width:100%;margin:0 0 6px;font-size:10px;color:#333}
     .legend span{display:inline-flex;align-items:center;gap:5px}
     .swatch{display:inline-block;width:11px;height:11px;border:1px solid #999;flex-shrink:0}
-    .comparison-shell{display:flex;align-items:center;gap:8px;width:max-content}
+    .page-header{display:grid;grid-template-columns:var(--arrow) minmax(0,1fr) var(--arrow);align-items:center;gap:12px;width:0;min-width:100%;margin:0 0 8px}
+    .page-title{margin:0;font-size:28px;line-height:1.15;font-weight:700;text-align:center;letter-spacing:.01em}
+    .toolbar{display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;gap:12px;width:0;min-width:100%;margin:0 0 8px;font-size:12px}
+    .today-date{margin:0;font-size:14px;font-weight:700;white-space:nowrap}
+    .toolbar-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+    .tool-btn{height:28px;padding:0 10px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:inherit;font-size:11px;cursor:pointer}
+    .tool-btn:hover:not(:disabled){background:#f2f2f2}
+    .tool-btn:disabled{color:#8a8a8a;border-color:#b0b0b0;background:#fafafa;cursor:not-allowed}
+    .save-status{min-width:7em;font-size:10px;color:#276221}
+    .comparison-shell{display:flex;align-items:flex-start;gap:8px;width:max-content}
     .nav-arrow{flex:0 0 var(--arrow);width:var(--arrow);height:var(--arrow);padding:0;border:1px solid var(--rule);border-radius:50%;background:var(--paper);color:var(--ink);display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.12);cursor:pointer}
     .nav-arrow svg{width:14px;height:14px;display:block}
     .nav-arrow:not(:disabled):hover{background:#f2f2f2}
     .nav-arrow:not(:disabled):focus-visible{outline:2px solid var(--ink);outline-offset:2px}
     .nav-arrow:disabled{color:#8a8a8a;border-color:#b0b0b0;background:#fafafa;box-shadow:none;cursor:not-allowed}
     .comparison-grid{display:grid;grid-template-columns:repeat(var(--invoice-count),var(--panel));gap:8px;width:max-content}
+    .comparison-grid.progress-view{gap:0;grid-template-columns:var(--panel) auto}
+    .progress-stack{display:flex;flex-direction:column;min-width:0;padding:8px 8px 12px;background:var(--paper);box-shadow:0 2px 12px rgba(0,0,0,.1)}
+    .progress-sheets{display:flex;align-items:flex-start;gap:8px}
+    .progress-page{position:relative;width:var(--progress);min-width:var(--progress);padding:0;background:transparent;box-shadow:none}
+    .progress-page + .progress-page{border-left:1px solid #d0d0d0;padding-left:8px}
+    .progress-head{display:flex;align-items:stretch;gap:2px;height:26px;margin:1px 0 5px}
+    .progress-tab{flex:1;min-width:0;padding:0 5px;border:1px solid var(--rule);background:#ececec;color:var(--ink);font:inherit;font-size:11px;line-height:24px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+    .progress-tab[aria-selected="true"]{background:var(--this-period);border-color:var(--rule);font-weight:700}
+    .progress-tab-add{flex:0 0 26px;width:26px;padding:0;font-size:18px;line-height:24px;font-weight:700}
+    .progress-tab-add:disabled{color:#aaa;cursor:not-allowed}
+    .progress-delete{position:absolute;top:1px;right:0;height:16px;padding:0 5px;border:1px solid #b0b0b0;background:#fafafa;color:#444;font:inherit;font-size:8.5px;cursor:pointer}
+    .progress-delete:hover{background:#eee;border-color:#888}
+    .progress-period{display:flex;align-items:center;gap:4px;height:20px;min-height:20px;margin-bottom:1px;border-bottom:1px solid var(--rule);font-size:11px;font-weight:700;overflow:hidden}
+    .progress-period label{flex:0 0 auto;font-style:italic;font-size:10px}
+    .progress-period input{flex:1;min-width:0;height:16px;margin:0;padding:0 2px;border:0;border-bottom:1px solid var(--period);background:transparent;font:inherit;font-size:11px;font-style:italic;text-align:center;color:var(--ink)}
+    .progress-period input:focus{outline:none;border-bottom-color:var(--ink)}
+    .progress-page table{width:100%}
+    col.progress-note{width:100%}
+    .progress-page thead th{text-align:left}
+    td.progress-note{padding:1px;vertical-align:middle}
+    td.progress-note input{display:block;width:100%;height:var(--reason-box);min-height:var(--reason-box);max-height:var(--reason-box);margin:0;padding:0 2px;border:1px solid #d0d0d0;background:#fff;font:inherit;font-size:9.5px;line-height:1.2}
+    td.progress-note input::placeholder{color:#5a5a5a}
+    tr.summary td.progress-note input{height:16px;min-height:16px;max-height:16px}
+    td.progress-note input:focus{outline:1px solid var(--ink);border-color:var(--ink)}
     .invoice-page{min-width:0;padding:8px 8px 12px;background:var(--paper);box-shadow:0 2px 12px rgba(0,0,0,.1)}
-    .invoice-title{margin:1px 0 5px;font-size:18px;line-height:1.1;text-align:center}
-    .billing-period{display:grid;grid-template-columns:1fr 78px 18px 78px;align-items:end;min-height:20px;margin-bottom:1px;border-bottom:1px solid var(--rule);font-size:11px;font-weight:700;font-style:italic}
+    .invoice-title{margin:1px 0 5px;height:26px;font-size:18px;line-height:26px;text-align:center}
+    .billing-period{display:grid;grid-template-columns:minmax(0,1fr) 78px 18px 78px;align-items:end;height:20px;min-height:20px;max-height:20px;margin-bottom:1px;border-bottom:1px solid var(--rule);font-size:11px;font-weight:700;font-style:italic;overflow:hidden}
+    .billing-period span:first-child{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
     .billing-period .from,.billing-period .to-date,.billing-period .word-to{text-align:center}
     .billing-period .from,.billing-period .to-date{border-bottom:1px solid var(--period);font-style:italic}
     .billing-period .word-to{font-style:normal;font-weight:700}
     table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10.5px;line-height:1}
-    col.description{width:35%}col.amount{width:12.5%}col.percent{width:7.5%}col.money{width:11.25%}
-    thead tr{height:28px}
-    thead th{padding:1px 2px 2px;border-bottom:1px solid var(--rule);font-weight:400;line-height:1.1;text-align:right;vertical-align:bottom}
-    thead th:first-child{text-align:left}
-    tbody tr.item{height:16px}tbody tr.stage{height:17px}tbody tr.subtotal{height:16px}tbody tr.summary{height:20px}tbody tr.spacer{height:10px}tbody tr.grand-total{height:22px}
+    col.description{width:26%}col.amount{width:10%}col.percent{width:7%}col.money{width:9.5%}col.reason{width:19%}
+    thead tr{height:32px}
+    thead th{height:32px;max-height:32px;padding:1px 2px 2px;border-bottom:1px solid var(--rule);font-weight:400;line-height:1.1;text-align:right;vertical-align:bottom;overflow:hidden}
+    thead th:first-child,thead th.reason{text-align:left}
+    tbody tr.item:not(.concern) td{height:calc(var(--reason-box) + 4px);max-height:calc(var(--reason-box) + 4px)}
+    tbody tr.item:not(.concern){height:calc(var(--reason-box) + 4px)}
+    tbody tr.stage{height:18px}tbody tr.subtotal{height:16px}tbody tr.summary{height:20px}tbody tr.spacer{height:10px}tbody tr.grand-total{height:22px}tbody tr.concern{height:auto}
     tbody td{padding:0 2px;vertical-align:middle}
+    tr.stage td{padding-top:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:clip;height:18px;max-height:18px;line-height:18px}
+    tr.subtotal td{height:16px;max-height:16px}
+    tr.summary td{height:20px;max-height:20px}
     td.description{overflow:hidden;white-space:nowrap;text-overflow:clip}
     td.num{text-align:right;white-space:nowrap}
-    tr.stage td{padding-top:2px;font-weight:700}
+    td.reason{padding:1px 2px;vertical-align:middle;height:calc(var(--reason-box) + 4px);max-height:calc(var(--reason-box) + 4px)}
+    td.reason .reason-wrap{display:flex;align-items:center;gap:3px;width:100%;height:var(--reason-box)}
+    td.reason textarea,td.reason .reason-slot{display:block;box-sizing:border-box;flex:1;min-width:0;width:auto;height:var(--reason-box);min-height:var(--reason-box);max-height:var(--reason-box);margin:0;padding:1px 3px;border:1px solid #c8c8c8;background:#fff;color:var(--ink);font:inherit;font-size:9.5px;line-height:1.2;resize:none;overflow-x:hidden;overflow-y:auto;field-sizing:fixed}
+    td.reason .reason-slot{border-color:#e0e0e0;background:#fafafa}
+    td.reason textarea:focus{outline:1px solid var(--ink);border-color:var(--ink)}
+    td.reason[data-flag="question"] textarea{background:var(--question);border-color:#c98900}
+    td.reason[data-flag="resolved"] textarea{background:var(--resolved);border-color:#3d7a45}
+    .reason-flag,.reason-flag-spacer{flex:0 0 var(--flag);width:var(--flag);height:var(--flag);padding:0}
+    .reason-flag-spacer{visibility:hidden}
+    .reason-flag{border:1px solid #b0b0b0;border-radius:50%;background:#f5f5f5;color:#666;font:inherit;font-size:10px;font-weight:700;line-height:1;display:grid;place-items:center;cursor:pointer}
+    .reason-flag:hover{background:#ececec;border-color:#888}
+    td.reason[data-flag="question"] .reason-flag{background:var(--question);border-color:#c98900;color:#7a4a00}
+    td.reason[data-flag="resolved"] .reason-flag{background:var(--resolved);border-color:#3d7a45;color:#276221}
+    tr.concern td.concern-text{white-space:normal;overflow:visible;font-size:10px;line-height:1.3;padding:4px 3px 5px;vertical-align:top}
     tr.subtotal td,tr.summary td{background:var(--subtotal);font-weight:700}
     tr.grand-total td{padding-top:3px;border-top:1px solid var(--rule);border-bottom:3px double var(--rule);font-weight:700}
-    td.this-period{background:var(--this-period)}
     td.pct-change{background:var(--pct-change)}
-    tr.subtotal td.this-period,tr.summary td.this-period,tr.grand-total td.this-period{background:#f0e08a}
+    td.this-period{background:var(--this-period)}
+    td.pct-change.this-period{background:var(--this-period)}
+    tr.subtotal td.this-period,tr.summary td.this-period,tr.grand-total td.this-period,
+    tr.subtotal td.pct-change.this-period,tr.summary td.pct-change.this-period,tr.grand-total td.pct-change.this-period{background:#f0e08a}
     tr.hover td,tr.hover td.this-period,tr.hover td.pct-change{box-shadow:inset 0 0 0 1px #c9a227;background:var(--hover)}
     tr.subtotal.hover td,tr.summary.hover td{background:#eee2a8}
     th.same-col,td.same-col{background:var(--match-fill)}
     tr.subtotal td.same-col,tr.summary td.same-col,tr.grand-total td.same-col{background:var(--match-sub)}
     tr.hover td.same-col,tr.hover td.same-col.this-period,tr.hover td.same-col.pct-change{background:var(--match-fill)}
     tr.subtotal.hover td.same-col,tr.summary.hover td.same-col{background:var(--match-sub)}
-    .penny{margin:6px 0 0;font-size:9.5px;line-height:1.3;color:#7a2e00;min-height:2.6em}
-    @media(min-width:1600px){table{font-size:11px}:root{--panel:560px}}
+    @media(min-width:1600px){table{font-size:11px}:root{--panel:720px}}
     @media(max-width:760px){.page{padding:0}.comparison-grid{gap:6px}.invoice-page{box-shadow:none}}
     @media print{
       @page{size:legal landscape;margin:.28in}
       body{background:#fff}
       .page{padding:0;overflow:visible}
       .notes,.legend{break-inside:avoid;margin-left:0}
-      .nav-arrow{display:none}
+      .toolbar .tool-btn,.save-status,.nav-arrow,.progress-head,.progress-delete{display:none}
+      .page-header{display:block}
       .comparison-grid{width:100%;gap:8px}
-      .invoice-page{padding:4px;box-shadow:none}
-      .invoice-title{font-size:13px}
+      .invoice-page,.progress-stack,.progress-page{padding:4px;box-shadow:none}
+      .invoice-title,.page-title{font-size:13px}
       table,.billing-period{font-size:8px}
       td.this-period,td.pct-change{background:#eee !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      td.reason[data-flag="question"] textarea,td.reason[data-flag="question"] .reason-flag{background:var(--question) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      td.reason[data-flag="resolved"] textarea,td.reason[data-flag="resolved"] .reason-flag{background:var(--resolved) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       th.same-col,td.same-col{background:var(--match-fill) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     }
   </style>
 </head>
 <body>
-  <main class="page" aria-label="Invoice comparison">
+  <main class="page" aria-label="Invoices and Work Progress">
     <div class="page-inner">
-      <p class="notes" id="source-notes"></p>
-      <p class="legend">
-        <span><i class="swatch" style="background:var(--match-fill);border-color:var(--match)"></i> Total billed (left) = Prior billed (right)</span>
-        <span><i class="swatch" style="background:var(--this-period)"></i> Current billed this period</span>
-        <span><i class="swatch" style="background:var(--pct-change)"></i> Percent complete changed from prior invoice</span>
-        <span>Hover a row to line it up across invoices</span>
-      </p>
-      <div class="comparison-shell">
-        <button type="button" class="nav-arrow" id="nav-prev" disabled aria-label="No earlier invoice available">
+      <div class="page-header">
+        <button type="button" class="nav-arrow" id="nav-prev" disabled aria-label="No earlier page available">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <div class="comparison-grid" id="comparison-grid"></div>
-        <button type="button" class="nav-arrow" id="nav-next" disabled aria-label="No later invoice available">
+        <h1 class="page-title">Invoices and Work Progress</h1>
+        <button type="button" class="nav-arrow" id="nav-next" disabled aria-label="No later page available">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
+      </div>
+      <div class="toolbar">
+        <p class="today-date"><time id="today-date"></time></p>
+        <div class="toolbar-actions">
+          <button type="button" class="tool-btn" id="save-progress">Save progress</button>
+          <button type="button" class="tool-btn" id="go-back" disabled>Go back</button>
+          <span class="save-status" id="save-status" aria-live="polite"></span>
+        </div>
+      </div>
+      <p class="legend">
+        <span><i class="swatch" style="background:var(--match-fill);border-color:var(--match)"></i> Total billed (left) = Prior billed (right)</span>
+        <span><i class="swatch" style="background:var(--this-period)"></i> Current billed this period, and percent complete on the right invoice</span>
+        <span><i class="swatch" style="background:var(--pct-change)"></i> Percent complete changed from prior invoice</span>
+        <span>Hover a row to line it up across invoices</span>
+        <span>Work progress tabs sit on that column. Select none or one tab for one sheet; select two tabs to show two sheets. Use + to add a month</span>
+        <span><i class="swatch" style="background:var(--question)"></i> ? marks a PM comment as a question; click again to mark resolved</span>
+        <span><i class="swatch" style="background:var(--resolved)"></i> Question resolved</span>
+      </p>
+      <p class="notes" id="source-notes"></p>
+      <div class="comparison-shell">
+        <div class="comparison-grid" id="comparison-grid"></div>
       </div>
     </div>
   </main>
@@ -206,7 +281,10 @@
           cont:['16%','1,617.50','8,382.50','-','1,617.50'],
           total:['24%','143,612.89','446,379.11','126,601.55','17,011.33']
         },
-        notes:'GET Total Billed $6,462.52 is $0.01 more than Prior $5,697.01 + Current $765.50. Grand Total billed is also $0.01 above Prior + Current. Printed figures are shown as-is. The Excel invoice date is 5/22/2026; the cover letter is dated May 21, 2026.'
+        concerns:[
+          {id:'c1',text:'As previously noted, the project has required effort on setting up the AGOL and coordination with HoLIS beyond what was included in the project scope for Task 1.3. Excess hours spent were previously billed to Task 1.5, as noted in the last progress report. In April, an additional 6.75 hours were spent on this task, which we are billing to the project contingency with DPP’s authorization.'},
+          {id:'c2',text:'Due to an additional round of edits to the website, we have exceeded the budget for Task 3.4. Excess hours were previously billed to Task 2.1, as noted in the last progress report. In April, an additional 3.75 hours were spent on this task, which we are billing to the project contingency with DPP’s authorization.'}
+        ]
       },
       {
         number:9,
@@ -257,14 +335,19 @@
           cont:['20%','1,966.25','8,033.75','1,617.50','348.75'],
           total:['27%','159,367.44','430,624.56','143,612.89','15,754.55']
         },
-        notes:'Cover letter dated June 9, 2026. Printed stage subtotals, GET, reimbursables, contingency, and Grand Total match Prior + Current and contract − remaining.'
+        concerns:[
+          {id:'c1',text:'This invoice includes 1.75 hours spent on Task 1.3 in April, that were to be billed to the project contingency with DPP’s authorization. These were inadvertently not included in the April invoice and are being included in this month’s invoice instead.'},
+          {id:'c2',text:'Please note that Task 1.5 (Tech Memos) has required more effort than originally anticipated, particularly for the land use memo. We have billed some of the additional time to Task 3.3 (Project Factsheet), which was completed under budget.'},
+          {id:'c3',text:'Task 3.1 (Engagement Strategy) has also required more effort and coordination than originally anticipated with Keith, who is the lead on this task. We are holding extra hours spent on this task, to be billed against Task 3.1A when the contract amendment is approved.'},
+          {id:'c4',text:'The budget for Task 3.4 (Website) is depleted. Future website-related work will require use of the project contingency.'},
+          {id:'c5',text:'Please note that the data provided by HoLIS for the network analysis maps as part of Task 3.5 (Neighborhood Profiles) did not produce accurate maps, which led to rework. R+A has used an alternate QGIS process to complete the network analysis maps, since we calculated that this would be more efficient and less costly than trying to resolve the data/process issue with HoLIS. To streamline the process for future mapping, we can discuss this issue with HoLIS and DPP.'}
+        ]
       }
     ];
 
     const PAIR=2;
     const ordered=[...invoices].sort((a,b)=>a.number-b.number);
-    let startIndex=Math.max(0,ordered.length-PAIR);
-    document.documentElement.style.setProperty('--invoice-count',PAIR);
+    let startIndex=Math.max(0,ordered.length-1);
     document.querySelector('#source-notes').innerHTML=
       '<strong>Numbers are copied from the printed invoices, not recalculated.</strong> '+
       'Invoice 8 GET Total Billed is <strong>$0.01 more</strong> than Prior + Current; Invoice 9 is internally consistent and carries that printed GET total forward. '+
@@ -274,13 +357,391 @@
     const prevBtn=document.querySelector('#nav-prev');
     const nextBtn=document.querySelector('#nav-next');
     const moneyActive=v=>v && v!=='-' && v!=='0' && v!=='0.00';
-
-    function pairLabel(shown){
-      if(shown.length<2) return shown[0]?`Invoice #${shown[0].number}`:'Invoices';
-      return `Invoice #${shown[0].number} and Invoice #${shown[1].number}`;
+    const clone=value=>JSON.parse(JSON.stringify(value));
+    const REASON_KEY='invoice-tracking-reasons-v1';
+    const FLAG_KEY='invoice-tracking-flags-v1';
+    const HISTORY_KEY='invoice-tracking-history-v1';
+    const HISTORY_MAX=3;
+    let reasons=(()=>{try{return JSON.parse(localStorage.getItem(REASON_KEY)||'{}')}catch(e){return {}}})();
+    let flags=(()=>{try{return JSON.parse(localStorage.getItem(FLAG_KEY)||'{}')}catch(e){return {}}})();
+    function reasonStoreKey(invoiceNumber,rowKey){return invoiceNumber+':'+rowKey}
+    function getReason(invoiceNumber,rowKey){return reasons[reasonStoreKey(invoiceNumber,rowKey)]||''}
+    function persistReasons(){localStorage.setItem(REASON_KEY,JSON.stringify(reasons))}
+    function persistFlags(){localStorage.setItem(FLAG_KEY,JSON.stringify(flags))}
+    function setReason(invoiceNumber,rowKey,value){
+      const k=reasonStoreKey(invoiceNumber,rowKey);
+      if(value) reasons[k]=value; else delete reasons[k];
+      persistReasons();
+    }
+    function getFlag(invoiceNumber,rowKey){
+      const value=flags[reasonStoreKey(invoiceNumber,rowKey)];
+      return value==='question'||value==='resolved'?value:'';
+    }
+    function setFlag(invoiceNumber,rowKey,value){
+      const k=reasonStoreKey(invoiceNumber,rowKey);
+      if(value) flags[k]=value; else delete flags[k];
+      persistFlags();
+    }
+    function paintFlag(td,btn,flag){
+      td.dataset.flag=flag||'';
+      if(flag==='question'){
+        btn.textContent='?';
+        btn.title='Question — click to mark resolved';
+        btn.setAttribute('aria-label','Mark question as resolved');
+        btn.setAttribute('aria-pressed','true');
+      }else if(flag==='resolved'){
+        btn.textContent='✓';
+        btn.title='Question resolved — click to clear';
+        btn.setAttribute('aria-label','Clear question mark');
+        btn.setAttribute('aria-pressed','true');
+      }else{
+        btn.textContent='?';
+        btn.title='Mark as question';
+        btn.setAttribute('aria-label','Mark comment as question');
+        btn.setAttribute('aria-pressed','false');
+      }
+    }
+    function reasonCell(invoiceNumber,rowKey,enabled,placeholder){
+      const td=document.createElement('td');
+      td.className='reason';
+      const wrap=document.createElement('div');
+      wrap.className='reason-wrap';
+      if(!enabled){
+        const slot=document.createElement('div');
+        slot.className='reason-slot';
+        slot.setAttribute('aria-hidden','true');
+        const spacer=document.createElement('span');
+        spacer.className='reason-flag-spacer';
+        spacer.setAttribute('aria-hidden','true');
+        wrap.append(slot,spacer);
+        td.appendChild(wrap);
+        return td;
+      }
+      const input=document.createElement('textarea');
+      input.rows=1;
+      input.placeholder=placeholder;
+      input.setAttribute('aria-label',placeholder);
+      input.value=getReason(invoiceNumber,rowKey);
+      input.addEventListener('input',()=>setReason(invoiceNumber,rowKey,input.value));
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.className='reason-flag';
+      paintFlag(td,btn,getFlag(invoiceNumber,rowKey));
+      btn.addEventListener('click',()=>{
+        const current=getFlag(invoiceNumber,rowKey);
+        const next=current===''?'question':current==='question'?'resolved':'';
+        setFlag(invoiceNumber,rowKey,next);
+        paintFlag(td,btn,next);
+      });
+      wrap.append(input,btn);
+      td.appendChild(wrap);
+      return td;
     }
 
-    function renderInvoice(invoice,prev,isLeft){
+    const PROGRESS_MAX=4;
+    const PROGRESS_VISIBLE_MAX=2;
+    const PROGRESS_KEY='invoice-tracking-progress-v1';
+    const SELECTED_KEY='invoice-tracking-progress-selected-v1';
+    function monthValue(period){
+      const text=(period||'').trim();
+      if(/^\d{4}-\d{2}$/.test(text)) return text;
+      const match=text.match(/^(\d{1,2})\/(?:\d{1,2}\/)?(\d{4})/);
+      if(match) return match[2]+'-'+String(Number(match[1])).padStart(2,'0');
+      return '';
+    }
+    function loadProgress(){
+      try{
+        const saved=JSON.parse(localStorage.getItem(PROGRESS_KEY)||'null');
+        if(Array.isArray(saved)&&saved.length){
+          const sheets=saved.slice(0,PROGRESS_MAX).map(sheet=>({id:sheet.id||('wp-'+Math.random().toString(36).slice(2,8)),period:monthValue(sheet.period)||'',notes:sheet.notes&&typeof sheet.notes==='object'?sheet.notes:{}}));
+          if(sheets.length<2) sheets.push({id:'wp-2',period:'',notes:{}});
+          return sheets;
+        }
+      }catch(e){}
+      return [{id:'wp-1',period:'',notes:{}},{id:'wp-2',period:'',notes:{}}];
+    }
+    let progressSheets=loadProgress();
+    let selectedProgressIds=(()=>{
+      try{
+        const saved=JSON.parse(localStorage.getItem(SELECTED_KEY)||'null');
+        if(Array.isArray(saved)){
+          const picked=saved.filter(id=>progressSheets.some(sheet=>sheet.id===id)).slice(0,PROGRESS_VISIBLE_MAX);
+          if(picked.length) return picked;
+        }
+      }catch(e){}
+      return progressSheets.slice(0,PROGRESS_VISIBLE_MAX).map(sheet=>sheet.id);
+    })();
+    function saveProgress(){
+      localStorage.setItem(PROGRESS_KEY,JSON.stringify(progressSheets));
+      localStorage.setItem(SELECTED_KEY,JSON.stringify(selectedProgressIds));
+    }
+    function liveState(){
+      return {
+        reasons:clone(reasons),
+        flags:clone(flags),
+        progressSheets:clone(progressSheets),
+        selectedProgressIds:clone(selectedProgressIds),
+        startIndex
+      };
+    }
+    function sameState(a,b){return JSON.stringify(a)===JSON.stringify(b)}
+    function loadHistory(){
+      try{
+        const saved=JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]');
+        return Array.isArray(saved)?saved.slice(-HISTORY_MAX):[];
+      }catch(e){return []}
+    }
+    let history=loadHistory();
+    const saveBtn=document.querySelector('#save-progress');
+    const backBtn=document.querySelector('#go-back');
+    const saveStatus=document.querySelector('#save-status');
+    let saveStatusTimer=0;
+    function flashStatus(message){
+      saveStatus.textContent=message;
+      clearTimeout(saveStatusTimer);
+      saveStatusTimer=setTimeout(()=>{if(saveStatus.textContent===message) saveStatus.textContent=''},4000);
+    }
+    function backSteps(){
+      if(!history.length) return 0;
+      if(!sameState(liveState(),history[history.length-1])) return history.length;
+      return history.length-1;
+    }
+    function updateHistoryButtons(){
+      const steps=backSteps();
+      backBtn.disabled=steps<=0;
+      backBtn.textContent=steps?`Go back (${steps})`:'Go back';
+      backBtn.setAttribute('aria-label',steps?`Go back ${steps} saved step${steps>1?'s':''}`:'No saved steps to go back');
+    }
+    function persistHistory(){localStorage.setItem(HISTORY_KEY,JSON.stringify(history))}
+    function applyState(state){
+      reasons=state.reasons&&typeof state.reasons==='object'?clone(state.reasons):{};
+      flags=state.flags&&typeof state.flags==='object'?clone(state.flags):{};
+      progressSheets=Array.isArray(state.progressSheets)&&state.progressSheets.length
+        ?clone(state.progressSheets).slice(0,PROGRESS_MAX)
+        :[{id:'wp-1',period:'',notes:{}},{id:'wp-2',period:'',notes:{}}];
+      selectedProgressIds=Array.isArray(state.selectedProgressIds)
+        ?state.selectedProgressIds.filter(id=>progressSheets.some(sheet=>sheet.id===id)).slice(0,PROGRESS_VISIBLE_MAX)
+        :[];
+      if(typeof state.startIndex==='number') startIndex=state.startIndex;
+      persistReasons();
+      persistFlags();
+      saveProgress();
+    }
+    function saveCheckpoint(){
+      const state=liveState();
+      const last=history[history.length-1];
+      if(last && sameState(last,state)){
+        persistReasons();
+        persistFlags();
+        saveProgress();
+        flashStatus('Already saved');
+        updateHistoryButtons();
+        return;
+      }
+      history.push(state);
+      if(history.length>HISTORY_MAX) history=history.slice(-HISTORY_MAX);
+      persistHistory();
+      persistReasons();
+      persistFlags();
+      saveProgress();
+      flashStatus('Progress saved');
+      updateHistoryButtons();
+    }
+    function goBack(){
+      if(!history.length) return;
+      const current=liveState();
+      const last=history[history.length-1];
+      if(!sameState(current,last)){
+        applyState(last);
+        render();
+        flashStatus('Reverted to last save');
+        updateHistoryButtons();
+        return;
+      }
+      if(history.length<2){
+        flashStatus('No earlier save');
+        updateHistoryButtons();
+        return;
+      }
+      history.pop();
+      persistHistory();
+      applyState(history[history.length-1]);
+      render();
+      flashStatus('Reverted to previous save');
+      updateHistoryButtons();
+    }
+    function newProgressSheet(){return {id:'wp-'+Date.now().toString(36),period:'',notes:{}}}
+    function periodInputValue(sheet){
+      const text=(sheet.period||'').trim();
+      const value=monthValue(text);
+      if(!value) return text;
+      const [year,month]=value.split('-').map(Number);
+      return new Date(year,month-1,1).toLocaleDateString('en-US',{month:'short',year:'numeric'});
+    }
+    function progressTabLabel(sheet,index){
+      const text=(sheet.period||'').trim();
+      const value=monthValue(text);
+      if(value){
+        const [year,month]=value.split('-').map(Number);
+        return new Date(year,month-1,1).toLocaleDateString('en-US',{month:'short',year:'numeric'});
+      }
+      return text||('Month '+(index+1));
+    }
+    function visibleProgressSheets(){
+      const ids=selectedProgressIds.filter(id=>progressSheets.some(sheet=>sheet.id===id));
+      if(!ids.length) return [progressSheets[0]];
+      return ids.map(id=>progressSheets.find(sheet=>sheet.id===id)).filter(Boolean).slice(0,PROGRESS_VISIBLE_MAX);
+    }
+    function toggleProgressTab(id){
+      const at=selectedProgressIds.indexOf(id);
+      if(at>=0) selectedProgressIds=selectedProgressIds.filter(item=>item!==id);
+      else if(selectedProgressIds.length<PROGRESS_VISIBLE_MAX) selectedProgressIds=[...selectedProgressIds,id];
+      else selectedProgressIds=[selectedProgressIds[1],id];
+      saveProgress();
+      render();
+    }
+
+    function pages(){
+      return ordered.map(invoice=>({type:'invoice',invoice})).concat([{type:'progress'}]);
+    }
+    function pageLabel(page){
+      return page.type==='progress'?'Work progress':`Invoice #${page.invoice.number}`;
+    }
+    function pairLabel(shown){
+      if(!shown.length) return 'Invoices';
+      if(shown.some(page=>page.type==='progress')){
+        const invoice=shown.find(page=>page.type==='invoice');
+        const count=visibleProgressSheets().length;
+        const sheets=count===2?'2 work progress pages':'Work progress';
+        return invoice?`Invoice #${invoice.invoice.number} and ${sheets}`:sheets;
+      }
+      if(shown.length<2) return pageLabel(shown[0]);
+      return `${pageLabel(shown[0])} and ${pageLabel(shown[1])}`;
+    }
+    function columnTemplate(shown){
+      if(shown.some(page=>page.type==='progress')) return 'var(--panel) auto';
+      return shown.map(page=>page.type==='progress'?'var(--progress)':'var(--panel)').join(' ');
+    }
+
+    function fillProgressNotes(tbody,sheet){
+      tbody.replaceChildren();
+      for(const row of rows){
+        const tr=document.createElement('tr');
+        if(!Array.isArray(row)){
+          tr.className=row.type;
+          const td=document.createElement('td');
+          tr.appendChild(td);
+          if(row.type==='stage') tr.dataset.key=row.label;
+        }else{
+          const [key,label,,kind]=row;
+          tr.className=kind||'item';
+          tr.dataset.key=key;
+          const td=document.createElement('td');
+          td.className='progress-note';
+          const canNote=!kind || kind==='summary';
+          if(canNote){
+            const input=document.createElement('input');
+            input.type='text';
+            input.placeholder=label;
+            input.setAttribute('aria-label','Notes for '+label);
+            input.value=sheet.notes[key]||'';
+            input.addEventListener('input',()=>{sheet.notes[key]=input.value;saveProgress()});
+            td.appendChild(input);
+          }
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+    }
+
+    function renderProgressHead(){
+      const head=document.createElement('div');
+      head.className='progress-head';
+      head.setAttribute('role','tablist');
+      head.setAttribute('aria-label','Work progress months');
+      progressSheets.forEach((item,index)=>{
+        const tab=document.createElement('button');
+        tab.type='button';
+        tab.className='progress-tab';
+        tab.setAttribute('role','tab');
+        tab.setAttribute('aria-selected',selectedProgressIds.includes(item.id)?'true':'false');
+        tab.textContent=progressTabLabel(item,index);
+        tab.title=progressTabLabel(item,index)+'. Click to show or hide this month';
+        tab.addEventListener('click',()=>toggleProgressTab(item.id));
+        head.appendChild(tab);
+      });
+      const addTab=document.createElement('button');
+      addTab.type='button';
+      addTab.className='progress-tab progress-tab-add';
+      addTab.textContent='+';
+      addTab.disabled=progressSheets.length>=PROGRESS_MAX;
+      addTab.setAttribute('aria-label',progressSheets.length>=PROGRESS_MAX?'Maximum of 4 work progress months':'Add a work progress month');
+      addTab.addEventListener('click',()=>{
+        if(progressSheets.length>=PROGRESS_MAX) return;
+        const created=newProgressSheet();
+        progressSheets.push(created);
+        if(!selectedProgressIds.length) selectedProgressIds=[progressSheets[0].id,created.id].filter((id,index,all)=>all.indexOf(id)===index).slice(0,PROGRESS_VISIBLE_MAX);
+        else if(selectedProgressIds.length<PROGRESS_VISIBLE_MAX) selectedProgressIds=[...selectedProgressIds,created.id];
+        else selectedProgressIds=[selectedProgressIds[1],created.id];
+        saveProgress();
+        render();
+      });
+      head.appendChild(addTab);
+      return head;
+    }
+
+    function renderProgressPanel(sheet){
+      const article=document.createElement('article');
+      article.className='progress-page';
+      article.setAttribute('aria-label','Work progress '+(progressTabLabel(sheet,progressSheets.indexOf(sheet))));
+      article.innerHTML=
+        `<button type="button" class="progress-delete">Delete</button>`+
+        `<header class="progress-period">`+
+          `<label for="period-${sheet.id}">Period</label>`+
+          `<input id="period-${sheet.id}" type="text" placeholder="Jun 2026" aria-label="Work progress month and year">`+
+        `</header>`+
+        `<table>`+
+          `<colgroup><col class="progress-note"></colgroup>`+
+          `<thead><tr><th>Notes</th></tr></thead>`+
+          `<tbody></tbody>`+
+        `</table>`;
+      const periodInput=article.querySelector(`#period-${sheet.id}`);
+      periodInput.value=periodInputValue(sheet);
+      periodInput.addEventListener('input',()=>{
+        sheet.period=periodInput.value;
+        saveProgress();
+        const stack=article.closest('.progress-stack');
+        const head=stack&&stack.querySelector('.progress-head');
+        if(head) head.replaceWith(renderProgressHead());
+      });
+      const deleteBtn=article.querySelector('.progress-delete');
+      if(progressSheets.length<=1){
+        deleteBtn.hidden=true;
+      }else{
+        deleteBtn.addEventListener('click',()=>{
+          if(progressSheets.length<=1) return;
+          progressSheets=progressSheets.filter(item=>item.id!==sheet.id);
+          selectedProgressIds=selectedProgressIds.filter(id=>id!==sheet.id);
+          saveProgress();
+          render();
+        });
+      }
+      fillProgressNotes(article.querySelector('tbody'),sheet);
+      return article;
+    }
+
+    function renderProgressStack(){
+      const wrap=document.createElement('div');
+      wrap.className='progress-stack';
+      wrap.appendChild(renderProgressHead());
+      const sheets=document.createElement('div');
+      sheets.className='progress-sheets';
+      visibleProgressSheets().forEach(sheet=>sheets.appendChild(renderProgressPanel(sheet)));
+      wrap.appendChild(sheets);
+      return wrap;
+    }
+
+    function renderInvoice(invoice,prev,isLeft,markPctYellow){
       const article=document.createElement('article');
       article.className='invoice-page';
       article.setAttribute('aria-labelledby',`invoice-${invoice.number}-title`);
@@ -294,23 +755,23 @@
           `<time class="to-date" datetime="${invoice.isoEnd}">${invoice.end}</time>`+
         `</header>`+
         `<table>`+
-          `<colgroup><col class="description"><col class="amount"><col class="percent"><col class="money"><col class="money"><col class="money"><col class="money"></colgroup>`+
+          `<colgroup><col class="description"><col class="amount"><col class="percent"><col class="money"><col class="money"><col class="money"><col class="money"><col class="reason"></colgroup>`+
           `<thead><tr>`+
             `<th></th><th>Contract Amount</th><th>Percent<br>Complete</th>`+
             `<th${isLeft?` class="same-col" title="${sameTitle}"`:''}>Total<br>Billed</th>`+
             `<th>Remaining</th>`+
             `<th${!isLeft&&prev?` class="same-col" title="${sameTitle}"`:''}>Prior<br>Billed</th>`+
             `<th>Current Billed</th>`+
+            `<th class="reason">Reason / PM comment</th>`+
           `</tr></thead><tbody></tbody>`+
-        `</table>`+
-        (invoice.notes?`<p class="penny">${invoice.notes}</p>`:'');
+        `</table>`;
       const tbody=article.querySelector('tbody');
       for(const row of rows){
         const tr=document.createElement('tr');
         if(!Array.isArray(row)){
           tr.className=row.type;
           const td=document.createElement('td');
-          td.colSpan=7;
+          td.colSpan=8;
           td.textContent=row.label||'';
           tr.appendChild(td);
           if(row.type==='stage') tr.dataset.key=row.label;
@@ -330,48 +791,114 @@
             td.textContent=value;
             if(i===1 && prev && prev.values[key] && prev.values[key][0]!==vals[0]) td.classList.add('pct-change');
             if(i===5 && moneyActive(value)) td.classList.add('this-period');
+            if(markPctYellow && i===1 && moneyActive(vals[4])) td.classList.add('this-period');
             if((isLeft && i===2) || (!isLeft && prev && i===4)){
               td.classList.add('same-col');
               td.title=sameTitle;
             }
             tr.appendChild(td);
           });
+          const billedNow=moneyActive(vals[4]);
+          const isTaskRow=!kind;
+          if(isTaskRow){
+            tr.appendChild(reasonCell(invoice.number,key,billedNow,'Why is this billed?'));
+          }else{
+            const empty=document.createElement('td');
+            empty.className='reason';
+            tr.appendChild(empty);
+          }
         }
         tbody.appendChild(tr);
       }
+      const concernHead=document.createElement('tr');
+      concernHead.className='stage';
+      concernHead.dataset.key='scope-budget-heading';
+      const concernHeadTd=document.createElement('td');
+      concernHeadTd.colSpan=8;
+      concernHeadTd.textContent='Scope and Budget Comments/Concerns';
+      concernHead.appendChild(concernHeadTd);
+      tbody.appendChild(concernHead);
+      (invoice.concerns||[]).forEach((concern,i)=>{
+        const tr=document.createElement('tr');
+        tr.className='concern item';
+        tr.dataset.key='concern-'+invoice.number+'-'+concern.id;
+        const text=document.createElement('td');
+        text.className='description concern-text';
+        text.colSpan=7;
+        text.textContent=(i+1)+'. '+concern.text;
+        tr.appendChild(text);
+        tr.appendChild(reasonCell(invoice.number,'concern:'+concern.id,true,'PM comment on this concern'));
+        tbody.appendChild(tr);
+      });
       return article;
     }
 
     function updateNav(shown){
+      const all=pages();
       const atStart=startIndex<=0;
-      const atEnd=startIndex>=ordered.length-PAIR;
+      const atEnd=startIndex>=all.length-PAIR;
       prevBtn.disabled=atStart;
       nextBtn.disabled=atEnd;
-      prevBtn.setAttribute('aria-label',atStart?'No earlier invoice available':`Show ${pairLabel(ordered.slice(startIndex-1,startIndex+1))}`);
-      nextBtn.setAttribute('aria-label',atEnd?'No later invoice available':`Show ${pairLabel(ordered.slice(startIndex+1,startIndex+3))}`);
-      grid.setAttribute('aria-label',pairLabel(shown));
+      prevBtn.setAttribute('aria-label',atStart?'No earlier page available':`Show ${pairLabel(all.slice(startIndex-1,startIndex+1))}`);
+      nextBtn.setAttribute('aria-label',atEnd?'No later page available':`Show ${pairLabel(all.slice(startIndex+1,startIndex+3))}`);
+      const label=pairLabel(shown);
+      grid.setAttribute('aria-label',label);
     }
 
     function render(){
-      const shown=ordered.slice(startIndex,startIndex+PAIR);
-      document.title=`Invoice Comparison — ${pairLabel(shown)}`;
+      const all=pages();
+      if(startIndex>all.length-PAIR) startIndex=Math.max(0,all.length-PAIR);
+      const shown=all.slice(startIndex,startIndex+PAIR);
+      const hasProgress=shown.some(page=>page.type==='progress');
+      document.title=`Invoices and Work Progress — ${pairLabel(shown)}`;
+      grid.classList.toggle('progress-view',hasProgress);
+      grid.style.gridTemplateColumns=columnTemplate(shown);
       grid.replaceChildren();
-      shown.forEach((invoice,index)=>grid.appendChild(renderInvoice(invoice,index>0?shown[index-1]:null,index===0)));
+      if(hasProgress){
+        const invoice=shown.find(page=>page.type==='invoice').invoice;
+        const prevInvoice=ordered[ordered.findIndex(item=>item.number===invoice.number)-1]||null;
+        grid.appendChild(renderInvoice(invoice,prevInvoice,true,true));
+        grid.appendChild(renderProgressStack());
+      }else{
+        shown.forEach((page,index)=>{
+          const invoice=page.invoice;
+          const prevInvoice=ordered[ordered.findIndex(item=>item.number===invoice.number)-1]||null;
+          grid.appendChild(renderInvoice(invoice,prevInvoice,index===0,index!==0));
+        });
+      }
       updateNav(shown);
+      updateHistoryButtons();
     }
 
     prevBtn.addEventListener('click',()=>{if(prevBtn.disabled||startIndex<=0)return;startIndex-=1;render()});
-    nextBtn.addEventListener('click',()=>{if(nextBtn.disabled||startIndex>=ordered.length-PAIR)return;startIndex+=1;render()});
+    nextBtn.addEventListener('click',()=>{if(nextBtn.disabled||startIndex>=pages().length-PAIR)return;startIndex+=1;render()});
+    saveBtn.addEventListener('click',saveCheckpoint);
+    backBtn.addEventListener('click',goBack);
+    function paintToday(){
+      const now=new Date();
+      const stamp=document.querySelector('#today-date');
+      stamp.dateTime=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      stamp.textContent=`${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}/${String(now.getFullYear()).slice(-2)}`;
+    }
+    function scheduleDateTick(){
+      const now=new Date();
+      const next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,1);
+      setTimeout(()=>{paintToday();scheduleDateTick()},Math.max(1000,next-now));
+    }
+    paintToday();
+    scheduleDateTick();
     render();
 
-    grid.addEventListener('pointerover',e=>{
+    const shell=document.querySelector('.comparison-shell');
+    shell.addEventListener('pointerover',e=>{
+      if(e.target.closest('textarea,input,button,select')) return;
       const tr=e.target.closest('tr[data-key]');
       if(!tr) return;
       const key=tr.dataset.key;
-      for(const hit of grid.querySelectorAll('tr[data-key]')) hit.classList.toggle('hover',hit.dataset.key===key);
+      for(const hit of shell.querySelectorAll('tr[data-key]')) hit.classList.toggle('hover',hit.dataset.key===key);
     });
-    grid.addEventListener('pointerleave',()=>{
-      for(const hit of grid.querySelectorAll('tr.hover')) hit.classList.remove('hover');
+    shell.addEventListener('pointerleave',()=>{
+      for(const hit of shell.querySelectorAll('tr.hover')) hit.classList.remove('hover');
     });
   </script>
 </body>
