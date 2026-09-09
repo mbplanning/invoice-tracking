@@ -3,77 +3,376 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Invoice Comparison - Invoices #8 and #9</title>
+  <title>Invoice Comparison — Invoices #8 and #9</title>
   <style>
-    :root{--ink:#050505;--paper:#fff;--subtotal:#d7d7d7;--rule:#111;--canvas:#e9e9e9;--invoice-count:2}
-    *{box-sizing:border-box} body{margin:0;color:var(--ink);background:var(--canvas);font-family:"Arial Narrow",Arial,Helvetica,sans-serif;font-variant-numeric:tabular-nums}
-    .comparison-shell{width:100%;min-height:100vh;overflow-x:auto;padding:12px}
-    .comparison-grid{display:grid;grid-template-columns:repeat(var(--invoice-count),590px);gap:8px;width:max-content;margin:0 auto}
-    .invoice-page{min-width:0;padding:10px 10px 16px;background:var(--paper);box-shadow:0 2px 14px rgba(0,0,0,.1)}
-    .invoice-title{margin:0 0 7px;font-size:20px;line-height:1.15;text-align:center}
-    .billing-period{display:grid;grid-template-columns:1fr 82px 22px 82px;align-items:end;height:23px;border-bottom:1px solid var(--rule);font-size:12px;font-weight:700;font-style:italic}
-    .billing-period .from,.billing-period .to-date,.billing-period .word-to{text-align:center}.billing-period .word-to{font-style:normal}
-    table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;line-height:1}
-    col.description{width:32%}col.amount{width:13%}col.percent{width:9%}col.money{width:11.5%}
-    thead tr{height:31px}thead th{padding:2px 1px 3px;border-bottom:1px solid var(--rule);font-weight:400;line-height:1.15;text-align:right;vertical-align:bottom}thead th:first-child{text-align:left}
-    tbody tr.item{height:17px}tbody tr.stage{height:19px}tbody tr.subtotal{height:18px}tbody tr.summary{height:23px}tbody tr.spacer{height:13px}tbody tr.grand-total{height:25px}
-    tbody td{padding:1px;vertical-align:middle}td.description{overflow:hidden;white-space:nowrap;text-overflow:clip}td.num{text-align:right}
-    tr.stage td{padding-top:3px;font-weight:700}tr.subtotal td,tr.summary td{background:var(--subtotal);font-weight:700}
-    tr.grand-total td{padding-top:4px;border-top:1px solid var(--rule);border-bottom:3px double var(--rule);font-weight:700}
-    @media(min-width:1780px){table{font-size:11.5px}}
-    @media(max-width:760px){.comparison-shell{padding:0}.comparison-grid{display:flex;width:max-content;gap:6px}.invoice-page{width:590px;box-shadow:none}}
-    @media print{@page{size:legal landscape;margin:.25in}body{background:#fff}.comparison-shell{padding:0;overflow:visible}.comparison-grid{width:100%;gap:8px}.invoice-page{padding:6px;box-shadow:none}.invoice-title{font-size:14px}table,.billing-period{font-size:8px}}
+    :root{
+      --ink:#050505;
+      --paper:#fff;
+      --subtotal:#d7d7d7;
+      --rule:#111;
+      --canvas:#e8e8e8;
+      --period:#c4c4c4;
+      --this-period:#fff3b0;
+      --pct-change:#e7f0ff;
+      --hover:#fff8d6;
+      --match:#cfe9d4;
+      --match-fill:#eef7f0;
+      --match-sub:#e4f0e6;
+      --note:#5c3b00;
+      --invoice-count:2;
+      --panel:536px;
+      --arrow:32px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;color:var(--ink);background:var(--canvas);font-family:"Arial Narrow",Arial,Helvetica,sans-serif;font-variant-numeric:tabular-nums}
+    .page{width:100%;min-height:100vh;overflow-x:auto;padding:8px 8px 16px}
+    .page-inner{width:max-content;margin:0 auto}
+    .notes{width:calc(var(--panel) * var(--invoice-count) + 8px);margin:0 0 7px calc(var(--arrow) + 8px);padding:5px 8px;background:#fff8e8;border:1px solid #e0c48a;color:var(--note);font-size:11px;line-height:1.35}
+    .notes strong{font-weight:700}
+    .legend{display:flex;gap:14px;flex-wrap:wrap;width:calc(var(--panel) * var(--invoice-count) + 8px);margin:0 0 6px calc(var(--arrow) + 8px);font-size:10px;color:#333}
+    .legend span{display:inline-flex;align-items:center;gap:5px}
+    .swatch{display:inline-block;width:11px;height:11px;border:1px solid #999;flex-shrink:0}
+    .comparison-shell{display:flex;align-items:center;gap:8px;width:max-content}
+    .nav-arrow{flex:0 0 var(--arrow);width:var(--arrow);height:var(--arrow);padding:0;border:1px solid var(--rule);border-radius:50%;background:var(--paper);color:var(--ink);display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.12);cursor:pointer}
+    .nav-arrow svg{width:14px;height:14px;display:block}
+    .nav-arrow:not(:disabled):hover{background:#f2f2f2}
+    .nav-arrow:not(:disabled):focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+    .nav-arrow:disabled{color:#8a8a8a;border-color:#b0b0b0;background:#fafafa;box-shadow:none;cursor:not-allowed}
+    .comparison-grid{display:grid;grid-template-columns:repeat(var(--invoice-count),var(--panel));gap:8px;width:max-content}
+    .invoice-page{min-width:0;padding:8px 8px 12px;background:var(--paper);box-shadow:0 2px 12px rgba(0,0,0,.1)}
+    .invoice-title{margin:1px 0 5px;font-size:18px;line-height:1.1;text-align:center}
+    .billing-period{display:grid;grid-template-columns:1fr 78px 18px 78px;align-items:end;min-height:20px;margin-bottom:1px;border-bottom:1px solid var(--rule);font-size:11px;font-weight:700;font-style:italic}
+    .billing-period .from,.billing-period .to-date,.billing-period .word-to{text-align:center}
+    .billing-period .from,.billing-period .to-date{border-bottom:1px solid var(--period);font-style:italic}
+    .billing-period .word-to{font-style:normal;font-weight:700}
+    table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10.5px;line-height:1}
+    col.description{width:35%}col.amount{width:12.5%}col.percent{width:7.5%}col.money{width:11.25%}
+    thead tr{height:28px}
+    thead th{padding:1px 2px 2px;border-bottom:1px solid var(--rule);font-weight:400;line-height:1.1;text-align:right;vertical-align:bottom}
+    thead th:first-child{text-align:left}
+    tbody tr.item{height:16px}tbody tr.stage{height:17px}tbody tr.subtotal{height:16px}tbody tr.summary{height:20px}tbody tr.spacer{height:10px}tbody tr.grand-total{height:22px}
+    tbody td{padding:0 2px;vertical-align:middle}
+    td.description{overflow:hidden;white-space:nowrap;text-overflow:clip}
+    td.num{text-align:right;white-space:nowrap}
+    tr.stage td{padding-top:2px;font-weight:700}
+    tr.subtotal td,tr.summary td{background:var(--subtotal);font-weight:700}
+    tr.grand-total td{padding-top:3px;border-top:1px solid var(--rule);border-bottom:3px double var(--rule);font-weight:700}
+    td.this-period{background:var(--this-period)}
+    td.pct-change{background:var(--pct-change)}
+    tr.subtotal td.this-period,tr.summary td.this-period,tr.grand-total td.this-period{background:#f0e08a}
+    tr.hover td,tr.hover td.this-period,tr.hover td.pct-change{box-shadow:inset 0 0 0 1px #c9a227;background:var(--hover)}
+    tr.subtotal.hover td,tr.summary.hover td{background:#eee2a8}
+    th.same-col,td.same-col{background:var(--match-fill)}
+    tr.subtotal td.same-col,tr.summary td.same-col,tr.grand-total td.same-col{background:var(--match-sub)}
+    tr.hover td.same-col,tr.hover td.same-col.this-period,tr.hover td.same-col.pct-change{background:var(--match-fill)}
+    tr.subtotal.hover td.same-col,tr.summary.hover td.same-col{background:var(--match-sub)}
+    .penny{margin:6px 0 0;font-size:9.5px;line-height:1.3;color:#7a2e00;min-height:2.6em}
+    @media(min-width:1600px){table{font-size:11px}:root{--panel:560px}}
+    @media(max-width:760px){.page{padding:0}.comparison-grid{gap:6px}.invoice-page{box-shadow:none}}
+    @media print{
+      @page{size:legal landscape;margin:.28in}
+      body{background:#fff}
+      .page{padding:0;overflow:visible}
+      .notes,.legend{break-inside:avoid;margin-left:0}
+      .nav-arrow{display:none}
+      .comparison-grid{width:100%;gap:8px}
+      .invoice-page{padding:4px;box-shadow:none}
+      .invoice-title{font-size:13px}
+      table,.billing-period{font-size:8px}
+      td.this-period,td.pct-change{background:#eee !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      th.same-col,td.same-col{background:var(--match-fill) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
   </style>
 </head>
 <body>
-  <main class="comparison-shell" aria-label="Invoice comparison"><div class="comparison-grid" id="comparison-grid"></div></main>
+  <main class="page" aria-label="Invoice comparison">
+    <div class="page-inner">
+      <p class="notes" id="source-notes"></p>
+      <p class="legend">
+        <span><i class="swatch" style="background:var(--match-fill);border-color:var(--match)"></i> Total billed (left) = Prior billed (right)</span>
+        <span><i class="swatch" style="background:var(--this-period)"></i> Current billed this period</span>
+        <span><i class="swatch" style="background:var(--pct-change)"></i> Percent complete changed from prior invoice</span>
+        <span>Hover a row to line it up across invoices</span>
+      </p>
+      <div class="comparison-shell">
+        <button type="button" class="nav-arrow" id="nav-prev" disabled aria-label="No earlier invoice available">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="comparison-grid" id="comparison-grid"></div>
+        <button type="button" class="nav-arrow" id="nav-next" disabled aria-label="No later invoice available">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </main>
   <script>
     const rows=[
       {type:'stage',label:'Stage 1: Project Initiation and Existing Conditions'},
-      ['1.1','1.1: Project Workplan and Overall Schedule','$4,566'],['1.2','1.2: Team Kick-Off Meeting','$12,252'],['1.3','1.3: Data Collection and Base Map','$6,348'],['1.4','1.4: Growth Projections','$3,010'],['1.5','1.5: Topic-Specific Fact Sheets & Technical Memos','$55,770'],['s1','Subtotal Stage 1','$81,946','subtotal'],
+      ['1.1','1.1: Project Workplan and Overall Schedule','$4,566'],
+      ['1.2','1.2: Team Kick-Off Meeting','$12,252'],
+      ['1.3','1.3: Data Collection and Base Map','$6,348'],
+      ['1.4','1.4: Growth Projections','$3,010'],
+      ['1.5','1.5: Topic-Specific Fact Sheets & Technical Memos','$55,770',null,'Printed invoices clip after “Technica”. Status report in the same packets: Technical Memos / Technical Background Memos.'],
+      ['s1','Subtotal Stage 1','$81,946','subtotal'],
       {type:'stage',label:'Stage 2: Meetings and Collaboration'},
-      ['2.1','2.1 Project Management and Meetings/Trips','$70,567'],['2.2','2.2 Agency Meetings and Coordination','$18,784'],['s2','Subtotal Stage 2','$89,351','subtotal'],
+      ['2.1','2.1 Project Management and Meetings/Trips','$70,567',null,'Printed invoices clip after “Meetings/Trip”.'],
+      ['2.2','2.2 Agency Meetings and Coordination','$18,784'],
+      ['s2','Subtotal Stage 2','$89,351','subtotal'],
       {type:'stage',label:'Stage 3: Community Engagement'},
-      ['3.1','3.1: Engagement Strategy Memo','$5,601'],['3.2','3.2: Branding/Identity','$3,490'],['3.3','3.3: Project Fact Sheet','$4,830'],['3.4','3.4: Project Website','$11,170'],['3.5','3.5: Neighborhood Profiles','$4,980'],['3.6','3.6: Stakeholder Meetings (x36)','$23,374'],['3.7','3.7: Community Advisory Committee (x8)','$43,878'],['3.8','3.8: Community Symposium','$15,966'],['3.9','3.9: Focus Groups (x6)','$13,876'],['3.10','3.10: Pop-Ups (x2 rounds)','$14,834'],['3.11','3.11: Draft Plan Open House','$13,053'],['3.12','3.12: Online Surveys and Feedback (x2 rounds)','$7,283'],['s3','Subtotal Stage 3','$162,335','subtotal'],
+      ['3.1','3.1: Engagement Strategy Memo','$5,601'],
+      ['3.2','3.2: Branding/Identity','$3,490'],
+      ['3.3','3.3: Project Fact Sheet','$4,830'],
+      ['3.4','3.4: Project Website','$11,170'],
+      ['3.5','3.5: Neighborhood Profiles','$4,980'],
+      ['3.6','3.6: Stakeholder Meetings (x36)','$23,374'],
+      ['3.7','3.7: Community Advisory Committee (x8)','$43,878'],
+      ['3.8','3.8: Community Symposium','$15,966'],
+      ['3.9','3.9: Focus Groups (x6)','$13,876'],
+      ['3.10','3.10: Pop-Ups (x2 rounds)','$14,834'],
+      ['3.11','3.11: Draft Plan Open House','$13,053'],
+      ['3.12','3.12: Online Surveys and Feedback (x2 rounds)','$7,283',null,'Printed invoices clip after “x2 rou”.'],
+      ['s3','Subtotal Stage 3','$162,335','subtotal'],
       {type:'stage',label:'Stage 4: Growth Framework'},
-      ['4.1','4.1: Vision Statement and Key Elements/Goals','$4,210'],['4.2','4.2: Revised Place Types','$6,050'],['4.3','4.3: Draft Conceptual Maps','$9,917'],['4.4','4.4: Future Growth Concepts (for Areas of Change)','$8,590'],['s4','Subtotal Stage 4','$28,767','subtotal'],
+      ['4.1','4.1: Vision Statement and Key Elements/Goals','$4,210',null,'Printed invoices clip after “Elements/Go” or “Elements/G”.'],
+      ['4.2','4.2: Revised Place Types','$6,050'],
+      ['4.3','4.3: Draft Conceptual Maps','$9,917'],
+      ['4.4','4.4: Future Growth Concepts (for Areas of Change)','$8,590',null,'Printed invoices clip after “Areas of C”.'],
+      ['s4','Subtotal Stage 4','$28,767','subtotal'],
       {type:'stage',label:'Stage 5: Draft Development Plan'},
-      ['5.1','5.1: Plan Outline and Format','$3,231'],['5.2','5.2: Draft Policies, Actions, Frameworks, and Maps','$41,672'],['s5','Subtotal Stage 5','$44,903','subtotal'],
+      ['5.1','5.1: Plan Outline and Format','$3,231'],
+      ['5.2','5.2: Draft Policies, Actions, Frameworks, a','$41,672',null,'Wording is clipped on both printed invoices after “Frameworks, a”. Attachment 1 in the same packets lists this task as “Draft Policies and Actions”. The missing invoice-table ending was not guessed.'],
+      ['s5','Subtotal Stage 5','$44,903','subtotal'],
       {type:'stage',label:'Stage 6: Updated Development Plan'},
-      ['6.1','6.1: Administrative Draft Development Plan','$79,256'],['6.2','6.2: Screencheck Draft Development Plan','$35,145'],['6.3','6.3: Public Review Draft Development Plan','$9,240'],['6.4','6.4: Proposed Plan','$13,877'],['s6','Subtotal Stage 6','$137,518','subtotal'],
-      ['get','General Excise Tax','$25,672','summary'],['reimb','Reimbursables','$9,500','summary'],['cont','Extra Work/Contingency','$10,000','summary'],{type:'spacer'},['total','Grand Total','$589,992','grand-total']
+      ['6.1','6.1: Administrative Draft Development Plan','$79,256'],
+      ['6.2','6.2: Screencheck Draft Development Plan','$35,145'],
+      ['6.3','6.3: Public Review Draft Development Plan','$9,240'],
+      ['6.4','6.4: Proposed Plan','$13,877'],
+      ['s6','Subtotal Stage 6','$137,518','subtotal'],
+      ['get','General Excise Tax','$25,672','summary'],
+      ['reimb','Reimbursables','$9,500','summary'],
+      ['cont','Extra Work/Contingency','$10,000','summary'],
+      {type:'spacer'},
+      ['total','Grand Total','$589,992','grand-total']
     ];
 
+    // Printed invoice values: percent, total billed, remaining, prior billed, current billed.
     const invoices=[
-      {number:8,start:'4/1/2026',end:'4/30/2026',isoStart:'2026-04-01',isoEnd:'2026-04-30',values:{
-        '1.1':['29%','1,308.75','3,257.25','1,308.75','-'],'1.2':['71%','8,675.06','3,576.94','8,675.06','-'],'1.3':['63%','3,979.19','2,368.81','3,543.03','436.16'],'1.4':['25%','742.50','2,267.50','742.50','-'],'1.5':['61%','34,036.98','21,733.02','25,207.19','8,829.79'],s1:['59%','48,742.48','33,203.52','39,476.53','9,265.95'],
-        '2.1':['74%','52,066.54','18,500.46','48,957.79','3,108.75'],'2.2':['42%','7,877.95','10,906.05','7,705.57','172.38'],s2:['67%','59,944.49','29,406.51','56,663.36','3,281.13'],
-        '3.1':['25%','1,376.25','4,224.75','1,151.25','225.00'],'3.2':['99%','3,463.75','26.25','3,463.75','-'],'3.3':['37%','1,777.50','3,052.50','1,777.50','-'],'3.4':['97%','10,836.25','333.75','10,836.25','-'],'3.5':['96%','4,781.25','198.75','2,925.00','1,856.25'],'3.6':['8%','1,901.25','21,472.75','1,901.25','-'],'3.7':['0%','210.00','43,668.00','210.00','-'],'3.8':['0%','-','15,966.00','-','-'],'3.9':['0%','-','13,876.00','-','-'],'3.10':['0%','-','14,834.00','-','-'],'3.11':['0%','-','13,053.00','-','-'],'3.12':['0%','-','7,283.00','-','-'],s3:['15%','24,346.25','137,988.75','22,265.00','2,081.25'],
-        '4.1':['0%','-','4,210.00','-','-'],'4.2':['0%','-','6,050.00','-','-'],'4.3':['0%','-','9,917.00','-','-'],'4.4':['0%','-','8,590.00','-','-'],s4:['0%','-','28,767.00','-','-'],
-        '5.1':['70%','2,248.75','982.25','2,248.75','-'],'5.2':['0%','-','41,672.00','-','-'],s5:['5%','2,248.75','42,654.25','2,248.75','-'],
-        '6.1':['0%','-','79,256.00','-','-'],'6.2':['0%','-','35,145.00','-','-'],'6.3':['0%','-','9,240.00','-','-'],'6.4':['0%','-','13,877.00','-','-'],s6:['0%','-','137,518.00','-','-'],
-        get:['25%','6,462.52','19,209.48','5,697.01','765.50'],reimb:['3%','250.90','9,249.10','250.90','-'],cont:['16%','1,617.50','8,382.50','-','1,617.50'],total:['24%','143,612.89','446,379.11','126,601.55','17,011.33']
-      }},
-      {number:9,start:'5/1/2026',end:'5/22/2026',isoStart:'2026-05-01',isoEnd:'2026-05-22',values:{
-        '1.1':['29%','1,308.75','3,257.25','1,308.75','-'],'1.2':['72%','8,793.45','3,458.55','8,675.06','118.39'],'1.3':['85%','5,422.65','925.35','3,979.19','1,443.46'],'1.4':['99%','2,992.50','17.50','742.50','2,250.00'],'1.5':['70%','39,158.23','16,611.77','34,036.98','5,121.25'],s1:['70%','57,675.58','24,270.42','48,742.48','8,933.10'],
-        '2.1':['77%','54,399.04','16,167.96','52,066.54','2,332.50'],'2.2':['43%','8,046.70','10,737.30','7,877.95','168.75'],s2:['70%','62,445.74','26,905.26','59,944.49','2,501.25'],
-        '3.1':['29%','1,616.25','3,984.75','1,376.25','240.00'],'3.2':['99%','3,463.75','26.25','3,463.75','-'],'3.3':['95%','4,591.25','238.75','1,777.50','2,813.75'],'3.4':['97%','10,876.25','293.75','10,836.25','40.00'],'3.5':['99%','4,950.00','30.00','4,781.25','168.75'],'3.6':['8%','1,901.25','21,472.75','1,901.25','-'],'3.7':['0%','210.00','43,668.00','210.00','-'],'3.8':['0%','-','15,966.00','-','-'],'3.9':['0%','-','13,876.00','-','-'],'3.10':['0%','-','14,834.00','-','-'],'3.11':['0%','-','13,053.00','-','-'],'3.12':['0%','-','7,283.00','-','-'],s3:['17%','27,608.75','134,726.25','24,346.25','3,262.50'],
-        '4.1':['0%','-','4,210.00','-','-'],'4.2':['0%','-','6,050.00','-','-'],'4.3':['0%','-','9,917.00','-','-'],'4.4':['0%','-','8,590.00','-','-'],s4:['0%','-','28,767.00','-','-'],
-        '5.1':['70%','2,248.75','982.25','2,248.75','-'],'5.2':['0%','-','41,672.00','-','-'],s5:['5%','2,248.75','42,654.25','2,248.75','-'],
-        '6.1':['0%','-','79,256.00','-','-'],'6.2':['0%','-','35,145.00','-','-'],'6.3':['0%','-','9,240.00','-','-'],'6.4':['0%','-','13,877.00','-','-'],s6:['0%','-','137,518.00','-','-'],
-        get:['28%','7,171.47','18,500.53','6,462.52','708.95'],reimb:['3%','250.90','9,249.10','250.90','-'],cont:['20%','1,966.25','8,033.75','1,617.50','348.75'],total:['27%','159,367.44','430,624.56','143,612.89','15,754.55']
-      }}
+      {
+        number:8,
+        id:'304.RA24020.001-002',
+        start:'4/1/2026',end:'4/30/2026',
+        isoStart:'2026-04-01',isoEnd:'2026-04-30',
+        printedDate:'5/22/2026',
+        letterDate:'May 21, 2026',
+        source:'Excel invoice PDF (R1)',
+        values:{
+          '1.1':['29%','1,308.75','3,257.25','1,308.75','-'],
+          '1.2':['71%','8,675.06','3,576.94','8,675.06','-'],
+          '1.3':['63%','3,979.19','2,368.81','3,543.03','436.16'],
+          '1.4':['25%','742.50','2,267.50','742.50','-'],
+          '1.5':['61%','34,036.98','21,733.02','25,207.19','8,829.79'],
+          s1:['59%','48,742.48','33,203.52','39,476.53','9,265.95'],
+          '2.1':['74%','52,066.54','18,500.46','48,957.79','3,108.75'],
+          '2.2':['42%','7,877.95','10,906.05','7,705.57','172.38'],
+          s2:['67%','59,944.49','29,406.51','56,663.36','3,281.13'],
+          '3.1':['25%','1,376.25','4,224.75','1,151.25','225.00'],
+          '3.2':['99%','3,463.75','26.25','3,463.75','-'],
+          '3.3':['37%','1,777.50','3,052.50','1,777.50','-'],
+          '3.4':['97%','10,836.25','333.75','10,836.25','-'],
+          '3.5':['96%','4,781.25','198.75','2,925.00','1,856.25'],
+          '3.6':['8%','1,901.25','21,472.75','1,901.25','-'],
+          '3.7':['0%','210.00','43,668.00','210.00','-'],
+          '3.8':['0%','-','15,966.00','-','-'],
+          '3.9':['0%','-','13,876.00','-','-'],
+          '3.10':['0%','-','14,834.00','-','-'],
+          '3.11':['0%','-','13,053.00','-','-'],
+          '3.12':['0%','-','7,283.00','-','-'],
+          s3:['15%','24,346.25','137,988.75','22,265.00','2,081.25'],
+          '4.1':['0%','-','4,210.00','-','-'],
+          '4.2':['0%','-','6,050.00','-','-'],
+          '4.3':['0%','-','9,917.00','-','-'],
+          '4.4':['0%','-','8,590.00','-','-'],
+          s4:['0%','-','28,767.00','-','-'],
+          '5.1':['70%','2,248.75','982.25','2,248.75','-'],
+          '5.2':['0%','-','41,672.00','-','-'],
+          s5:['5%','2,248.75','42,654.25','2,248.75','-'],
+          '6.1':['0%','-','79,256.00','-','-'],
+          '6.2':['0%','-','35,145.00','-','-'],
+          '6.3':['0%','-','9,240.00','-','-'],
+          '6.4':['0%','-','13,877.00','-','-'],
+          s6:['0%','-','137,518.00','-','-'],
+          get:['25%','6,462.52','19,209.48','5,697.01','765.50'],
+          reimb:['3%','250.90','9,249.10','250.90','-'],
+          cont:['16%','1,617.50','8,382.50','-','1,617.50'],
+          total:['24%','143,612.89','446,379.11','126,601.55','17,011.33']
+        },
+        notes:'GET Total Billed $6,462.52 is $0.01 more than Prior $5,697.01 + Current $765.50. Grand Total billed is also $0.01 above Prior + Current. Printed figures are shown as-is. The Excel invoice date is 5/22/2026; the cover letter is dated May 21, 2026.'
+      },
+      {
+        number:9,
+        id:'304.RA24020.001-003',
+        start:'5/1/2026',end:'5/22/2026',
+        isoStart:'2026-05-01',isoEnd:'2026-05-22',
+        printedDate:'5/22/2026',
+        letterDate:'June 9, 2026',
+        source:'Invoice PDF page 9',
+        values:{
+          '1.1':['29%','1,308.75','3,257.25','1,308.75','-'],
+          '1.2':['72%','8,793.45','3,458.55','8,675.06','118.39'],
+          '1.3':['85%','5,422.65','925.35','3,979.19','1,443.46'],
+          '1.4':['99%','2,992.50','17.50','742.50','2,250.00'],
+          '1.5':['70%','39,158.23','16,611.77','34,036.98','5,121.25'],
+          s1:['70%','57,675.58','24,270.42','48,742.48','8,933.10'],
+          '2.1':['77%','54,399.04','16,167.96','52,066.54','2,332.50'],
+          '2.2':['43%','8,046.70','10,737.30','7,877.95','168.75'],
+          s2:['70%','62,445.74','26,905.26','59,944.49','2,501.25'],
+          '3.1':['29%','1,616.25','3,984.75','1,376.25','240.00'],
+          '3.2':['99%','3,463.75','26.25','3,463.75','-'],
+          '3.3':['95%','4,591.25','238.75','1,777.50','2,813.75'],
+          '3.4':['97%','10,876.25','293.75','10,836.25','40.00'],
+          '3.5':['99%','4,950.00','30.00','4,781.25','168.75'],
+          '3.6':['8%','1,901.25','21,472.75','1,901.25','-'],
+          '3.7':['0%','210.00','43,668.00','210.00','-'],
+          '3.8':['0%','-','15,966.00','-','-'],
+          '3.9':['0%','-','13,876.00','-','-'],
+          '3.10':['0%','-','14,834.00','-','-'],
+          '3.11':['0%','-','13,053.00','-','-'],
+          '3.12':['0%','-','7,283.00','-','-'],
+          s3:['17%','27,608.75','134,726.25','24,346.25','3,262.50'],
+          '4.1':['0%','-','4,210.00','-','-'],
+          '4.2':['0%','-','6,050.00','-','-'],
+          '4.3':['0%','-','9,917.00','-','-'],
+          '4.4':['0%','-','8,590.00','-','-'],
+          s4:['0%','-','28,767.00','-','-'],
+          '5.1':['70%','2,248.75','982.25','2,248.75','-'],
+          '5.2':['0%','-','41,672.00','-','-'],
+          s5:['5%','2,248.75','42,654.25','2,248.75','-'],
+          '6.1':['0%','-','79,256.00','-','-'],
+          '6.2':['0%','-','35,145.00','-','-'],
+          '6.3':['0%','-','9,240.00','-','-'],
+          '6.4':['0%','-','13,877.00','-','-'],
+          s6:['0%','-','137,518.00','-','-'],
+          get:['28%','7,171.47','18,500.53','6,462.52','708.95'],
+          reimb:['3%','250.90','9,249.10','250.90','-'],
+          cont:['20%','1,966.25','8,033.75','1,617.50','348.75'],
+          total:['27%','159,367.44','430,624.56','143,612.89','15,754.55']
+        },
+        notes:'Cover letter dated June 9, 2026. Printed stage subtotals, GET, reimbursables, contingency, and Grand Total match Prior + Current and contract − remaining.'
+      }
     ];
 
-    document.documentElement.style.setProperty('--invoice-count',Math.min(invoices.length,3));
+    const PAIR=2;
+    const ordered=[...invoices].sort((a,b)=>a.number-b.number);
+    let startIndex=Math.max(0,ordered.length-PAIR);
+    document.documentElement.style.setProperty('--invoice-count',PAIR);
+    document.querySelector('#source-notes').innerHTML=
+      '<strong>Numbers are copied from the printed invoices, not recalculated.</strong> '+
+      'Invoice 8 GET Total Billed is <strong>$0.01 more</strong> than Prior + Current; Invoice 9 is internally consistent and carries that printed GET total forward. '+
+      'Task 5.2 is clipped on both invoices after “Frameworks, a”. Hover a clipped description for the source note.';
+
     const grid=document.querySelector('#comparison-grid');
-    for(const invoice of invoices){
-      const article=document.createElement('article');article.className='invoice-page';article.setAttribute('aria-labelledby',`invoice-${invoice.number}-title`);
-      article.innerHTML=`<h1 class="invoice-title" id="invoice-${invoice.number}-title">Invoice #${invoice.number}</h1><header class="billing-period"><span>Professional Services for billing period:</span><time class="from" datetime="${invoice.isoStart}">${invoice.start}</time><span class="word-to">to</span><time class="to-date" datetime="${invoice.isoEnd}">${invoice.end}</time></header><table><colgroup><col class="description"><col class="amount"><col class="percent"><col class="money"><col class="money"><col class="money"><col class="money"></colgroup><thead><tr><th></th><th>Contract Amount</th><th>Percent<br>Complete</th><th>Total<br>Billed</th><th>Remaining</th><th>Prior<br>Billed</th><th>Current Billed</th></tr></thead><tbody></tbody></table>`;
-      const tbody=article.querySelector('tbody');
-      for(const row of rows){const tr=document.createElement('tr');if(!Array.isArray(row)){tr.className=row.type;const td=document.createElement('td');td.colSpan=7;td.textContent=row.label||'';tr.appendChild(td)}else{tr.className=row[3]||'item';const label=document.createElement('td');label.className='description';label.textContent=row[1];tr.appendChild(label);for(const value of [row[2],...invoice.values[row[0]]]){const td=document.createElement('td');td.className='num';td.textContent=value;tr.appendChild(td)}}tbody.appendChild(tr)}
-      grid.appendChild(article)
+    const prevBtn=document.querySelector('#nav-prev');
+    const nextBtn=document.querySelector('#nav-next');
+    const moneyActive=v=>v && v!=='-' && v!=='0' && v!=='0.00';
+
+    function pairLabel(shown){
+      if(shown.length<2) return shown[0]?`Invoice #${shown[0].number}`:'Invoices';
+      return `Invoice #${shown[0].number} and Invoice #${shown[1].number}`;
     }
+
+    function renderInvoice(invoice,prev,isLeft){
+      const article=document.createElement('article');
+      article.className='invoice-page';
+      article.setAttribute('aria-labelledby',`invoice-${invoice.number}-title`);
+      const sameTitle='Total billed on the older invoice is Prior billed on the newer invoice';
+      article.innerHTML=
+        `<h1 class="invoice-title" id="invoice-${invoice.number}-title">Invoice #${invoice.number}</h1>`+
+        `<header class="billing-period">`+
+          `<span>Professional Services for billing period:</span>`+
+          `<time class="from" datetime="${invoice.isoStart}">${invoice.start}</time>`+
+          `<span class="word-to">to</span>`+
+          `<time class="to-date" datetime="${invoice.isoEnd}">${invoice.end}</time>`+
+        `</header>`+
+        `<table>`+
+          `<colgroup><col class="description"><col class="amount"><col class="percent"><col class="money"><col class="money"><col class="money"><col class="money"></colgroup>`+
+          `<thead><tr>`+
+            `<th></th><th>Contract Amount</th><th>Percent<br>Complete</th>`+
+            `<th${isLeft?` class="same-col" title="${sameTitle}"`:''}>Total<br>Billed</th>`+
+            `<th>Remaining</th>`+
+            `<th${!isLeft&&prev?` class="same-col" title="${sameTitle}"`:''}>Prior<br>Billed</th>`+
+            `<th>Current Billed</th>`+
+          `</tr></thead><tbody></tbody>`+
+        `</table>`+
+        (invoice.notes?`<p class="penny">${invoice.notes}</p>`:'');
+      const tbody=article.querySelector('tbody');
+      for(const row of rows){
+        const tr=document.createElement('tr');
+        if(!Array.isArray(row)){
+          tr.className=row.type;
+          const td=document.createElement('td');
+          td.colSpan=7;
+          td.textContent=row.label||'';
+          tr.appendChild(td);
+          if(row.type==='stage') tr.dataset.key=row.label;
+        }else{
+          const [key,label,contract,kind,note]=row;
+          tr.className=kind||'item';
+          tr.dataset.key=key;
+          const labelCell=document.createElement('td');
+          labelCell.className='description';
+          labelCell.textContent=label;
+          if(note) labelCell.title=note;
+          tr.appendChild(labelCell);
+          const vals=invoice.values[key];
+          [contract,...vals].forEach((value,i)=>{
+            const td=document.createElement('td');
+            td.className='num';
+            td.textContent=value;
+            if(i===1 && prev && prev.values[key] && prev.values[key][0]!==vals[0]) td.classList.add('pct-change');
+            if(i===5 && moneyActive(value)) td.classList.add('this-period');
+            if((isLeft && i===2) || (!isLeft && prev && i===4)){
+              td.classList.add('same-col');
+              td.title=sameTitle;
+            }
+            tr.appendChild(td);
+          });
+        }
+        tbody.appendChild(tr);
+      }
+      return article;
+    }
+
+    function updateNav(shown){
+      const atStart=startIndex<=0;
+      const atEnd=startIndex>=ordered.length-PAIR;
+      prevBtn.disabled=atStart;
+      nextBtn.disabled=atEnd;
+      prevBtn.setAttribute('aria-label',atStart?'No earlier invoice available':`Show ${pairLabel(ordered.slice(startIndex-1,startIndex+1))}`);
+      nextBtn.setAttribute('aria-label',atEnd?'No later invoice available':`Show ${pairLabel(ordered.slice(startIndex+1,startIndex+3))}`);
+      grid.setAttribute('aria-label',pairLabel(shown));
+    }
+
+    function render(){
+      const shown=ordered.slice(startIndex,startIndex+PAIR);
+      document.title=`Invoice Comparison — ${pairLabel(shown)}`;
+      grid.replaceChildren();
+      shown.forEach((invoice,index)=>grid.appendChild(renderInvoice(invoice,index>0?shown[index-1]:null,index===0)));
+      updateNav(shown);
+    }
+
+    prevBtn.addEventListener('click',()=>{if(prevBtn.disabled||startIndex<=0)return;startIndex-=1;render()});
+    nextBtn.addEventListener('click',()=>{if(nextBtn.disabled||startIndex>=ordered.length-PAIR)return;startIndex+=1;render()});
+    render();
+
+    grid.addEventListener('pointerover',e=>{
+      const tr=e.target.closest('tr[data-key]');
+      if(!tr) return;
+      const key=tr.dataset.key;
+      for(const hit of grid.querySelectorAll('tr[data-key]')) hit.classList.toggle('hover',hit.dataset.key===key);
+    });
+    grid.addEventListener('pointerleave',()=>{
+      for(const hit of grid.querySelectorAll('tr.hover')) hit.classList.remove('hover');
+    });
   </script>
 </body>
 </html>

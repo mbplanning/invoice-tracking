@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ʻEwa DP · Invoice 9 / 10 review</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <p>ʻEwa Development Plan · contract review</p>
+      <h1>Invoice 9 / Invoice 10</h1>
+    </div>
+
+    <div class="switch" role="group" aria-label="Invoice shown">
+      <span>Current invoice</span>
+      <button type="button" id="view-10" aria-pressed="true">Invoice 10</button>
+      <button type="button" id="view-9" aria-pressed="false">Invoice 9</button>
+    </div>
+
+    <p id="compare-line" class="compare-line"></p>
+    <p id="period-line" class="period-line"></p>
+
+    <div class="top-actions">
+      <button type="button" id="open-summary">9 vs 10</button>
+      <button type="button" id="open-disc">Discussion <b id="disc-count">0</b></button>
+      <button type="button" id="export-notes">Export notes</button>
+      <label class="import">Import<input type="file" id="import-notes" accept="application/json"></label>
+      <button type="button" id="clear-notes">Reset notes</button>
+    </div>
+  </header>
+
+  <p id="status" class="status" hidden></p>
+  <p id="error" class="error" hidden></p>
+
+  <main class="layout">
+    <nav class="index" id="task-index" aria-label="Tasks"></nav>
+
+    <section class="invoice" aria-label="Invoice pages">
+      <div class="invoice-bar">
+        <button type="button" id="prev-page">Previous</button>
+        <p id="page-label">Page</p>
+        <button type="button" id="next-page">Next</button>
+        <p id="on-page" class="on-page"></p>
+      </div>
+      <div class="stage" id="stage">
+        <canvas id="page"></canvas>
+      </div>
+    </section>
+
+    <section class="sheet" id="sheet" aria-label="Selected task review">
+      <p class="empty" id="empty-sheet">Select a task.</p>
+      <article id="review" hidden>
+        <p class="task-kicker" id="rv-kicker"></p>
+        <h2 id="rv-name"></h2>
+        <p class="task-meta" id="rv-meta"></p>
+
+        <section>
+          <h3>What is being billed now?</h3>
+          <p class="now-amount" id="rv-now"></p>
+          <p class="now-sub" id="rv-now-sub"></p>
+        </section>
+
+        <section>
+          <h3 id="rv-change-title">What changed since Invoice 9?</h3>
+          <dl class="facts" id="rv-facts"></dl>
+          <div id="rv-bar"></div>
+          <p class="flag-note" id="rv-mismatch" hidden></p>
+          <p class="pct-caveat">Printed percent complete is percent billed on the invoice. It is not independently verified as percent of work finished.</p>
+        </section>
+
+        <section>
+          <h3>Why is this being billed?</h3>
+          <div id="rv-why"></div>
+        </section>
+
+        <section>
+          <h3>Do I need to ask the consultant?</h3>
+          <button type="button" id="mark-btn">Mark for discussion</button>
+          <div id="mark-form" hidden>
+            <label>Category
+              <select id="mark-cat">
+                <option>Clarify billing</option>
+                <option>Percent complete concern</option>
+                <option>Deliverable not received</option>
+                <option>Deliverable incomplete</option>
+                <option>Billing appears ahead of work</option>
+                <option>Need supporting documentation</option>
+                <option>Need consultant explanation</option>
+                <option>Possible invoice correction</option>
+                <option>Other</option>
+              </select>
+            </label>
+            <label>Reviewer comment
+              <textarea id="mark-text" rows="3" placeholder="Example: Task increased from 77% to 82%, but trips remain. Confirm basis for percent billed."></textarea>
+            </label>
+            <label>Status
+              <select id="mark-status">
+                <option>Open</option>
+                <option>Discussed</option>
+                <option>Resolved</option>
+              </select>
+            </label>
+            <button type="button" id="unmark-btn">Remove mark</button>
+          </div>
+        </section>
+      </article>
+    </section>
+  </main>
+
+  <div class="panel" id="summary-panel" hidden>
+    <div class="panel-card">
+      <header>
+        <h2>Invoice 9 vs Invoice 10</h2>
+        <button type="button" id="close-summary">Close</button>
+      </header>
+      <div id="summary-body"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="disc-panel" hidden>
+    <div class="panel-card">
+      <header>
+        <h2>Discussion items</h2>
+        <button type="button" id="close-disc">Close</button>
+      </header>
+      <div id="disc-body"></div>
+    </div>
+  </div>
+
+  <script src="lib/pdf.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
