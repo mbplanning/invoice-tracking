@@ -36,9 +36,19 @@
     .page{width:100%;min-height:100vh;overflow-x:auto;padding:8px 8px 16px}
     .page-inner{display:flex;flex-direction:column;width:max-content;margin:0 auto}
     .notes{width:0;min-width:100%;margin:0 0 7px;padding:5px 8px;background:#fff8e8;border:1px solid #e0c48a;color:var(--note);font-size:11px;line-height:1.35}
+    .notes[hidden]{display:none}
     .notes strong{font-weight:700}
-    .legend{display:flex;gap:14px;flex-wrap:wrap;width:0;min-width:100%;margin:0 0 6px;font-size:10px;color:#333}
-    .legend span{display:inline-flex;align-items:center;gap:5px}
+    .notes ul{margin:4px 0 0;padding:0;list-style:none}
+    .notes li{margin:0 0 4px}
+    .notes .review-note{display:flex;align-items:flex-start;gap:6px}
+    .notes .review-note textarea{flex:1;min-width:0;box-sizing:border-box;margin:0;padding:3px 4px;border:1px solid #e0c48a;background:#fffdf6;color:var(--note);font:inherit;font-size:inherit;line-height:1.35;resize:none;overflow:hidden;min-height:22px;field-sizing:fixed}
+    .notes .review-note textarea:focus{outline:1px solid var(--ink);border-color:var(--ink)}
+    .review-note-delete{flex:0 0 auto;height:20px;padding:0 6px;border:1px solid #c8b07a;background:#fff8e8;color:var(--note);font:inherit;font-size:10px;cursor:pointer}
+    .review-note-delete:hover{background:#f3e4c0}
+    .legend{display:flex;flex-direction:column;gap:3px;width:0;min-width:100%;margin:0 0 6px;font-size:13px;line-height:1.3;color:#333;text-align:left}
+    .legend-line{display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-start;width:100%;gap:8px}
+    .legend-line span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+    .legend-sep{flex:0 0 auto;color:#888}
     .swatch{display:inline-block;width:11px;height:11px;border:1px solid #999;flex-shrink:0}
     .page-header{display:grid;grid-template-columns:var(--arrow) minmax(0,1fr) var(--arrow);align-items:center;gap:12px;width:0;min-width:100%;margin:0 0 8px}
     .page-title{margin:0;font-size:28px;line-height:1.15;font-weight:700;text-align:center;letter-spacing:.01em}
@@ -143,6 +153,10 @@
     td.reason[data-flag="question"] .reason-flag{background:var(--question);border-color:#c98900;color:#7a4a00}
     td.reason[data-flag="resolved"] .reason-flag{background:var(--resolved);border-color:#3d7a45;color:#276221}
     tr.concern td.concern-text{white-space:normal;overflow:visible;font-size:inherit;line-height:1.25;padding:4px 3px 5px;vertical-align:top}
+    tr.concern td.concern-text .concern-edit{display:flex;align-items:flex-start;gap:6px;width:100%}
+    tr.concern td.concern-text .concern-num{flex:0 0 1.4em;padding-top:4px;font-weight:700;line-height:1.25}
+    tr.concern td.concern-text textarea{flex:1;min-width:0;box-sizing:border-box;margin:0;padding:3px 4px;border:1px solid #c8c8c8;background:#fff;color:var(--ink);font:inherit;font-size:inherit;line-height:1.25;resize:none;overflow:hidden;min-height:var(--reason-box);field-sizing:fixed}
+    tr.concern td.concern-text textarea:focus{outline:1px solid var(--ink);border-color:var(--ink)}
     tr.subtotal td,tr.summary td{background:var(--subtotal);font-weight:700}
     tr.grand-total td{padding-top:3px;border-top:1px solid var(--rule);border-bottom:3px double var(--rule);font-weight:700}
     td.pct-change{background:var(--pct-change)}
@@ -160,17 +174,23 @@
     @media(min-width:1600px){table{font-size:12.5px}:root{--panel:700px}}
     @media(max-width:760px){.page{padding:0}.comparison-grid{gap:6px}.invoice-page{box-shadow:none}}
     @media print{
-      @page{size:legal landscape;margin:.28in}
-      body{background:#fff}
-      .page{padding:0;overflow:visible}
+      @page{size:11in 17in;margin:.32in}
+      html,body{width:auto;height:auto;background:#fff}
+      .page{padding:0;overflow:visible;width:100%}
+      .page-inner{width:100% !important;min-width:0 !important;margin:0}
+      .page-header,.toolbar,.legend,.notes{width:100% !important;min-width:0 !important}
       .notes,.legend{break-inside:avoid;margin-left:0}
-      .toolbar .tool-btn,.save-status,.nav-arrow,.progress-head,.progress-delete,.task-link-handle{display:none}
+      .toolbar .tool-btn,.save-status,.nav-arrow,.progress-head,.progress-delete,.review-note-delete,.task-link-handle{display:none}
       .page-header{display:block}
-      .comparison-grid{width:100%;gap:8px}
-      .invoice-page{padding:4px 4px 4px 28px;box-shadow:none}
-      .progress-stack,.progress-page{padding:4px;box-shadow:none}
+      .comparison-shell{width:100%;max-width:100%}
+      .comparison-grid{width:100% !important;max-width:100%;gap:6px;grid-template-columns:1fr 1fr !important}
+      .comparison-grid.progress-view{gap:0;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr) !important}
+      .invoice-page{width:auto;min-width:0;padding:4px 4px 4px 22px;box-shadow:none}
+      .progress-stack,.progress-page{width:auto;min-width:0;padding:4px;box-shadow:none}
+      .progress-sheets{width:100%}
       .invoice-title,.page-title{font-size:13px}
       table,.billing-period{font-size:8px}
+      .notes textarea{border-color:transparent;background:transparent}
       td.this-period,td.pct-change{background:#eee !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       td.reason[data-flag="question"] textarea,td.reason[data-flag="question"] .reason-flag{background:var(--question) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       td.reason[data-flag="resolved"] textarea,td.reason[data-flag="resolved"] .reason-flag{background:var(--resolved) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -196,21 +216,33 @@
         <div class="toolbar-actions">
           <button type="button" class="tool-btn" id="save-progress">Save progress</button>
           <button type="button" class="tool-btn" id="go-back" disabled>Go back</button>
+          <button type="button" class="tool-btn" id="print-view" aria-label="Print the current view as an 11 by 17 inch portrait PDF">Print</button>
           <span class="save-status" id="save-status" aria-live="polite"></span>
         </div>
       </div>
       <p class="legend">
-        <span><i class="swatch" style="background:var(--match-fill);border-color:var(--match)"></i> Total billed (left) = Prior billed (right)</span>
-        <span>Red underline: Prior billed does not match the previous invoice’s Total billed (printed figure left as-is)</span>
-        <span><i class="swatch" style="background:var(--this-period)"></i> Current billed this period, and percent complete on the right invoice</span>
-        <span><i class="swatch" style="background:var(--pct-change)"></i> Percent complete changed from prior invoice</span>
-        <span>Hover a row to line it up across invoices</span>
-        <span>Work progress tabs sit on that column. Select none or one tab for one sheet; select two tabs to show two sheets. Use + to add a month</span>
-        <span><i class="swatch" style="background:var(--question)"></i> ? marks a PM comment as a question; click again to mark resolved</span>
-        <span><i class="swatch" style="background:var(--resolved)"></i> Question resolved</span>
-        <span>Drag the dot at the start of a task to another task it was billed to. Open the note on the arrow; Close folds it</span>
+        <span class="legend-line">
+          <span><i class="swatch" style="background:var(--match-fill);border-color:var(--match)"></i> Total billed (left) = Prior billed (right)</span>
+          <span class="legend-sep">·</span>
+          <span>Red underline: Prior billed ≠ previous Total billed</span>
+          <span class="legend-sep">·</span>
+          <span><i class="swatch" style="background:var(--this-period)"></i> Current billed / % complete</span>
+          <span class="legend-sep">·</span>
+          <span><i class="swatch" style="background:var(--pct-change)"></i> % complete changed</span>
+          <span class="legend-sep">·</span>
+          <span>Hover a row to line it up</span>
+        </span>
+        <span class="legend-line">
+          <span>Work progress: 0–2 tabs; + adds a month</span>
+          <span class="legend-sep">·</span>
+          <span><i class="swatch" style="background:var(--question)"></i> ? = question, again = resolved</span>
+          <span class="legend-sep">·</span>
+          <span><i class="swatch" style="background:var(--resolved)"></i> Resolved</span>
+          <span class="legend-sep">·</span>
+          <span>Drag a task’s dot to the billed-to task; Open/Close the arrow note</span>
+        </span>
       </p>
-      <p class="notes" id="source-notes"></p>
+      <div class="notes" id="source-notes"></div>
       <div class="comparison-shell">
         <div class="comparison-grid" id="comparison-grid"></div>
       </div>
@@ -547,13 +579,44 @@
     try{localStorage.removeItem('invoice-tracking-imported-v1')}catch(e){}
     const ordered=invoices.slice().sort((a,b)=>a.number-b.number);
     let startIndex=Math.max(0,ordered.length-1);
-    document.querySelector('#source-notes').innerHTML=
-      '<strong>Numbers are copied from the printed invoices, not recalculated.</strong> '+
-      'Invoice 6 (January 1–31, 2026, invoice 26-7379) is copied from the printed billing table; Invoice 7 Prior Billed matches Invoice 6 Total Billed. '+
-      'Invoice 7 (February 1–March 31, 2026) is copied from the printed billing table; Invoice 8 Prior Billed matches Invoice 7 Total Billed. '+
-      'Invoice 8 GET Total Billed is <strong>$0.01 more</strong> than Prior + Current; Invoice 9 is internally consistent and carries that printed GET total forward. '+
-      'Invoice 10 (May 23–June 30, 2026) is copied from the printed billing table. Invoice 10 Prior Billed does not match Invoice 9 Total Billed on <strong>1.1</strong> ($2,249.74 vs $1,308.75), <strong>1.2</strong> ($7,852.45 vs $8,793.45), <strong>Stage 1 subtotal</strong> ($58,200.58 vs $57,675.58), <strong>2.1</strong> ($53,874.04 vs $54,399.04), and <strong>Stage 2 subtotal</strong> ($61,920.74 vs $62,445.74). Those printed figures were left as-is. '+
-      'Task 5.2 is clipped on the printed invoices after “Frameworks, a”. Hover a clipped description for the source note.';
+    const DEFAULT_REVIEW_NOTES=[
+      {id:'rn-1',text:'Invoice 6 (January 1–31, 2026, invoice 26-7379) is copied from the printed billing table.'},
+      {id:'rn-2',text:'Invoice 6 Stage subtotals equal the sum of their tasks. Remaining equals contract minus Total Billed. Prior + Current equals Total Billed.'},
+      {id:'rn-3',text:'Invoice 7 Prior Billed matches Invoice 6 Total Billed on every line.'},
+      {id:'rn-4',text:'Invoice 7 (February 1–March 31, 2026) is copied from the printed billing table.'},
+      {id:'rn-5',text:'Invoice 7 Stage subtotals equal the sum of their tasks. Remaining equals contract minus Total Billed. Prior + Current equals Total Billed.'},
+      {id:'rn-6',text:'Invoice 8 Prior Billed matches Invoice 7 Total Billed on every line.'},
+      {id:'rn-7',text:'Invoice 8 GET Total Billed is $0.01 more than Prior + Current ($6,462.52 vs $6,462.51).'},
+      {id:'rn-8',text:'Invoice 8 Grand Total is $0.01 more than Prior + Current ($143,612.89 vs $143,612.88), the same penny as GET.'},
+      {id:'rn-9',text:'Invoice 9 Prior Billed matches Invoice 8 Total Billed on every line.'},
+      {id:'rn-10',text:'Invoice 9 Stage subtotals equal the sum of their tasks. Remaining equals contract minus Total Billed. Prior + Current equals Total Billed. It carries Invoice 8’s printed GET total forward.'},
+      {id:'rn-11',text:'Invoice 10 (May 23–June 30, 2026) is copied from the printed billing table.'},
+      {id:'rn-12',text:'Invoice 10 Prior Billed does not match Invoice 9 Total Billed on 1.1 ($2,249.74 vs $1,308.75).'},
+      {id:'rn-13',text:'Invoice 10 Prior Billed does not match Invoice 9 Total Billed on 1.2 ($7,852.45 vs $8,793.45).'},
+      {id:'rn-14',text:'Invoice 10 Prior Billed does not match Invoice 9 Total Billed on Stage 1 subtotal ($58,200.58 vs $57,675.58).'},
+      {id:'rn-15',text:'Invoice 10 Prior Billed does not match Invoice 9 Total Billed on 2.1 ($53,874.04 vs $54,399.04).'},
+      {id:'rn-16',text:'Invoice 10 Prior Billed does not match Invoice 9 Total Billed on Stage 2 subtotal ($61,920.74 vs $62,445.74).'},
+      {id:'rn-17',text:'Invoice 10 Stage 1 Prior Billed $58,200.58 does not equal the sum of Stage 1 task Priors ($57,675.57).'},
+      {id:'rn-18',text:'Invoice 10 Stage 1 Prior + Current ($72,852.28) does not equal printed Total Billed ($72,327.27).'},
+      {id:'rn-19',text:'Invoice 10 Task 2.1 Prior + Current ($57,219.04) does not equal printed Total Billed ($57,744.04).'},
+      {id:'rn-20',text:'Invoice 10 Stage 2 Prior + Current ($66,525.74) does not equal printed Total Billed ($67,050.74).'},
+      {id:'rn-21',text:'Invoice 10 Grand Total Prior + Current is $0.01 more than printed Total Billed ($186,697.39 vs $186,697.38).'},
+      {id:'rn-22',text:'Invoice 10 Task 1.5 Remaining is $7,134.07; contract $55,770 minus Total Billed $48,634.93 is $7,135.07 (printed remaining matches a $55,769 contract).'},
+      {id:'rn-23',text:'Invoice 10 Stage 1 Remaining is $9,617.73; contract minus Total Billed is $9,618.73.'},
+      {id:'rn-24',text:'Invoice 10 Task 2.1 Remaining is $12,822.46; contract minus Total Billed is $12,822.96.'},
+      {id:'rn-25',text:'Invoice 10 Task 2.2 Remaining is $9,476.80; contract minus Total Billed is $9,477.30.'},
+      {id:'rn-26',text:'Invoice 10 Stage 2 Remaining is $22,299.26; contract minus Total Billed is $22,300.26.'},
+      {id:'rn-27',text:'Invoice 10 Task 3.1 Remaining is $1,635.10; contract minus Total Billed is $1,634.10.'},
+      {id:'rn-28',text:'Invoice 10 Task 3.6 Remaining is $17,798.25; contract minus Total Billed is $17,797.75.'},
+      {id:'rn-29',text:'Invoice 10 Task 3.7 Remaining is $43,668.50; contract minus Total Billed is $43,668.00.'},
+      {id:'rn-30',text:'Invoice 10 Stage 3 Remaining is $128,702.60; contract minus Total Billed is $128,700.60.'},
+      {id:'rn-31',text:'Invoice 10 Task 4.2 Remaining is $7,107.00; the shared contract is $6,050.00 with $0 billed.'},
+      {id:'rn-32',text:'Invoice 10 Task 4.3 Remaining is $8,860.00; the shared contract is $9,917.00 with $0 billed. Tasks 4.2 and 4.3 remaining still sum to the same $15,967.00 as the shared contracts.'},
+      {id:'rn-33',text:'Invoice 10 Task 6.2 Remaining is $35,146.00; the shared contract is $35,145.00.'},
+      {id:'rn-34',text:'Invoice 10 Task 6.4 Remaining is $13,876.00; the shared contract is $13,877.00.'},
+      {id:'rn-35',text:'Those printed figures were left as-is.'},
+      {id:'rn-36',text:'Task 5.2 is clipped on the printed invoices after “Frameworks, a”. Hover a clipped description for the source note.'}
+    ];
 
     const grid=document.querySelector('#comparison-grid');
     const prevBtn=document.querySelector('#nav-prev');
@@ -569,14 +632,44 @@
     const clone=value=>JSON.parse(JSON.stringify(value));
     const REASON_KEY='invoice-tracking-reasons-v1';
     const FLAG_KEY='invoice-tracking-flags-v1';
+    const CONCERN_KEY='invoice-tracking-concerns-v1';
+    const REVIEW_KEY='invoice-tracking-review-notes-v1';
+    function normalizeReviewNotes(saved){
+      if(!Array.isArray(saved)) return clone(DEFAULT_REVIEW_NOTES);
+      return saved.map((item,index)=>({
+        id:item&&item.id?String(item.id):('rn-'+index),
+        text:item&&typeof item.text==='string'?item.text:''
+      }));
+    }
+    let reviewNotes=(()=>{try{
+      const saved=JSON.parse(localStorage.getItem(REVIEW_KEY)||'null');
+      return saved===null?clone(DEFAULT_REVIEW_NOTES):normalizeReviewNotes(saved);
+    }catch(e){return clone(DEFAULT_REVIEW_NOTES)}})();
     const HISTORY_KEY='invoice-tracking-history-v1';
     const HISTORY_MAX=3;
     let reasons=(()=>{try{return JSON.parse(localStorage.getItem(REASON_KEY)||'{}')}catch(e){return {}}})();
     let flags=(()=>{try{return JSON.parse(localStorage.getItem(FLAG_KEY)||'{}')}catch(e){return {}}})();
+    let concernEdits=(()=>{try{
+      const saved=JSON.parse(localStorage.getItem(CONCERN_KEY)||'{}');
+      return saved&&typeof saved==='object'&&!Array.isArray(saved)?saved:{};
+    }catch(e){return {}}})();
     function reasonStoreKey(invoiceNumber,rowKey){return invoiceNumber+':'+rowKey}
+    function concernStoreKey(invoiceNumber,concernId){return invoiceNumber+':'+concernId}
     function getReason(invoiceNumber,rowKey){return reasons[reasonStoreKey(invoiceNumber,rowKey)]||''}
+    function getConcernText(invoiceNumber,concernId,fallback){
+      const saved=concernEdits[concernStoreKey(invoiceNumber,concernId)];
+      return typeof saved==='string'?saved:fallback;
+    }
     function persistReasons(){localStorage.setItem(REASON_KEY,JSON.stringify(reasons))}
     function persistFlags(){localStorage.setItem(FLAG_KEY,JSON.stringify(flags))}
+    function persistConcerns(){localStorage.setItem(CONCERN_KEY,JSON.stringify(concernEdits))}
+    function persistReviewNotes(){localStorage.setItem(REVIEW_KEY,JSON.stringify(reviewNotes))}
+    function setConcernText(invoiceNumber,concernId,value,fallback){
+      const k=concernStoreKey(invoiceNumber,concernId);
+      if(value===fallback) delete concernEdits[k];
+      else concernEdits[k]=value;
+      persistConcerns();
+    }
     const LINKS_KEY='invoice-tracking-bill-links-v1';
     function normalizeLinks(saved){
       const out={};
@@ -818,6 +911,58 @@
       }
     }
     const COMMENT_EXPAND_MAX=200;
+    function autosizeConcern(el){
+      el.style.height='auto';
+      el.style.height=Math.max(el.scrollHeight,32)+'px';
+    }
+    function autosizeReviewNote(el){
+      el.style.height='auto';
+      el.style.height=Math.max(el.scrollHeight,22)+'px';
+    }
+    function renderReviewNotes(){
+      const box=document.querySelector('#source-notes');
+      box.replaceChildren();
+      if(!reviewNotes.length){
+        box.hidden=true;
+        return;
+      }
+      box.hidden=false;
+      const heading=document.createElement('strong');
+      heading.textContent='Numbers are copied from the printed invoices, not recalculated.';
+      const list=document.createElement('ul');
+      reviewNotes.forEach((note,index)=>{
+        const li=document.createElement('li');
+        const wrap=document.createElement('div');
+        wrap.className='review-note';
+        const input=document.createElement('textarea');
+        input.rows=1;
+        input.placeholder='Review note';
+        input.setAttribute('aria-label','Review note '+(index+1));
+        input.value=note.text;
+        input.addEventListener('input',()=>{
+          note.text=input.value;
+          persistReviewNotes();
+          autosizeReviewNote(input);
+          updateHistoryButtons();
+        });
+        const del=document.createElement('button');
+        del.type='button';
+        del.className='review-note-delete';
+        del.textContent='Delete';
+        del.setAttribute('aria-label','Delete review note '+(index+1));
+        del.addEventListener('click',()=>{
+          reviewNotes=reviewNotes.filter(item=>item.id!==note.id);
+          persistReviewNotes();
+          renderReviewNotes();
+          updateHistoryButtons();
+        });
+        wrap.append(input,del);
+        li.appendChild(wrap);
+        list.appendChild(li);
+      });
+      box.append(heading,list);
+      requestAnimationFrame(()=>box.querySelectorAll('textarea').forEach(autosizeReviewNote));
+    }
     function commentNeedsExpand(el){
       if(!el||!((el.value||'').trim())) return false;
       return el.scrollHeight>el.clientHeight+2;
@@ -944,6 +1089,8 @@
       return {
         reasons:clone(reasons),
         flags:clone(flags),
+        concernEdits:clone(concernEdits),
+        reviewNotes:clone(reviewNotes),
         billLinks:clone(billLinks),
         progressSheets:clone(progressSheets),
         selectedProgressIds:clone(selectedProgressIds),
@@ -982,6 +1129,8 @@
     function applyState(state){
       reasons=state.reasons&&typeof state.reasons==='object'?clone(state.reasons):{};
       flags=state.flags&&typeof state.flags==='object'?clone(state.flags):{};
+      concernEdits=state.concernEdits&&typeof state.concernEdits==='object'&&!Array.isArray(state.concernEdits)?clone(state.concernEdits):{};
+      reviewNotes=Array.isArray(state.reviewNotes)?normalizeReviewNotes(state.reviewNotes):clone(DEFAULT_REVIEW_NOTES);
       billLinks=normalizeLinks(state.billLinks);
       progressSheets=Array.isArray(state.progressSheets)&&state.progressSheets.length
         ?clone(state.progressSheets).slice(0,PROGRESS_MAX)
@@ -992,8 +1141,11 @@
       if(typeof state.startIndex==='number') startIndex=state.startIndex;
       persistReasons();
       persistFlags();
+      persistConcerns();
+      persistReviewNotes();
       persistLinks();
       saveProgress();
+      renderReviewNotes();
     }
     function saveCheckpoint(){
       const state=liveState();
@@ -1001,6 +1153,8 @@
       if(last && sameState(last,state)){
         persistReasons();
         persistFlags();
+        persistConcerns();
+        persistReviewNotes();
         persistLinks();
         saveProgress();
         flashStatus('Already saved');
@@ -1012,6 +1166,8 @@
       persistHistory();
       persistReasons();
       persistFlags();
+      persistConcerns();
+      persistReviewNotes();
       persistLinks();
       saveProgress();
       flashStatus('Progress saved');
@@ -1314,10 +1470,27 @@
         const text=document.createElement('td');
         text.className='description concern-text';
         text.colSpan=7;
-        text.textContent=(i+1)+'. '+concern.text;
+        const wrap=document.createElement('div');
+        wrap.className='concern-edit';
+        const num=document.createElement('span');
+        num.className='concern-num';
+        num.textContent=(i+1)+'.';
+        const input=document.createElement('textarea');
+        input.rows=1;
+        input.placeholder='Scope and Budget comment';
+        input.setAttribute('aria-label','Scope and Budget comment '+(i+1)+' on Invoice #'+invoice.number);
+        input.value=getConcernText(invoice.number,concern.id,concern.text);
+        input.addEventListener('input',()=>{
+          setConcernText(invoice.number,concern.id,input.value,concern.text);
+          autosizeConcern(input);
+          relayoutComments(input);
+        });
+        wrap.append(num,input);
+        text.appendChild(wrap);
         tr.appendChild(text);
         tr.appendChild(reasonCell(invoice.number,'concern:'+concern.id,true,'PM comment on this concern'));
         tbody.appendChild(tr);
+        autosizeConcern(input);
       });
       bindTaskLinks(article,invoice.number);
       return article;
@@ -1359,6 +1532,7 @@
       updateNav(shown);
       updateHistoryButtons();
       requestAnimationFrame(()=>{
+        document.querySelectorAll('tr.concern textarea').forEach(autosizeConcern);
         syncAlignedRows();
         document.querySelectorAll('.invoice-page').forEach(paintInvoiceLinks);
       });
@@ -1368,6 +1542,10 @@
     nextBtn.addEventListener('click',()=>{if(nextBtn.disabled||startIndex>=pages().length-PAIR)return;startIndex+=1;render()});
     saveBtn.addEventListener('click',saveCheckpoint);
     backBtn.addEventListener('click',goBack);
+    document.querySelector('#print-view').addEventListener('click',()=>{
+      flashStatus('Save as PDF · 11 × 17 · Portrait');
+      window.print();
+    });
     function paintToday(){
       const now=new Date();
       const stamp=document.querySelector('#today-date');
@@ -1381,6 +1559,7 @@
     }
     paintToday();
     scheduleDateTick();
+    renderReviewNotes();
     render();
 
     function syncAlignedRows(){
