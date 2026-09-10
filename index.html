@@ -650,6 +650,15 @@
       return Number.isFinite(num)?num:null;
     }
     const clone=value=>JSON.parse(JSON.stringify(value));
+    function mergePlain(base,overlay){
+      const out=Object.assign({},base);
+      if(overlay&&typeof overlay==='object'&&!Array.isArray(overlay)){
+        Object.keys(overlay).forEach(key=>{
+          if(overlay[key]) out[key]=overlay[key];
+        });
+      }
+      return out;
+    }
     const REASON_KEY='invoice-tracking-reasons-v1';
     const FLAG_KEY='invoice-tracking-flags-v1';
     const CONCERN_KEY='invoice-tracking-concerns-v1';
@@ -667,8 +676,70 @@
     }catch(e){return clone(DEFAULT_REVIEW_NOTES)}})();
     const HISTORY_KEY='invoice-tracking-history-v1';
     const HISTORY_MAX=3;
-    let reasons=(()=>{try{return JSON.parse(localStorage.getItem(REASON_KEY)||'{}')}catch(e){return {}}})();
-    let flags=(()=>{try{return JSON.parse(localStorage.getItem(FLAG_KEY)||'{}')}catch(e){return {}}})();
+    const BUILT_IN_REASONS={
+      "9:1.2":"billing back, already completed",
+      "9:1.3":"completed. ",
+      "9:1.5":"working on this no deliverable",
+      "9:2.1":"unreasonable, based on the number of scoped trips",
+      "9:1.4":"neighborhood profile work",
+      "9:2.2":"billing backward",
+      "9:3.1":"ok",
+      "9:3.3":"final completed",
+      "9:3.4":"mostly done",
+      "9:3.5":"mostly done",
+      "9:concern:c1":"initially said reference to \u201cdeliverable-based\u201d billing in the contract, but after team meeting, agreed to bill based on deliverable",
+      "9:concern:c5":"mis communication",
+      "9:concern:c4":"yes",
+      "9:concern:c3":"memo billing progress ok ",
+      "9:concern:c2":"try not to do that again",
+      "8:concern:c2":"not to billed hourly",
+      "8:concern:c1":"not to billed hourly",
+      "10:1.1":"no current billed, but % complete is 20% up. didn't resolve it last time. ",
+      "10:1.2":"prior billed not equal total billed in #9 not equal. Billing backward. ",
+      "10:2.1":"prior billed not equal total billed in #9 not equal. Plan for the remaining trips. ",
+      "10:1.5":"no factsheet, memos need lots of revisions",
+      "10:3.1":"ok",
+      "10:2.2":"billing backward",
+      "10:3.6":"ok, but not done during this time period. billing backward",
+      "10:concern:c1":"ok",
+      "10:concern:c2":"ok",
+      "10:concern:c3":"not out side scoped budget. Revise this note. ",
+      "10:reimb":"overnight mailing",
+      "10:1.3":"GIS holis",
+      "10:3.5":"completed. ",
+      "8:1.5":"working on memo",
+      "8:3.5":"completed draft",
+      "7:concern:c1":"website done, no additional work",
+      "7:1.5":"Holis work billed to this",
+      "7:1.2":"completed, bill backward",
+      "7:1.3":"GIS work",
+      "7:2.1":"meetings, subs, and emails",
+      "7:2.2":"billing backward",
+      "7:3.4":"completed in Q2 2026",
+      "7:3.5":"progress",
+      "7:reimb":"don't recall what this is",
+      "6:1.2":"Items not 100% billed yet. Task completed pending invoices from subs. Per discussion 2.24 with consultant.",
+      "6:1.5":"factsheet outline, looking back, 20% is too much for outline. ",
+      "6:2.1":"meetings, calls, coordination",
+      "6:2.2":"meeting notes",
+      "6:3.3":"yes",
+      "6:3.4":"yes",
+      "6:3.5":"yes",
+      "9:cont":"well, not so ok"
+    };
+    const BUILT_IN_FLAGS={
+      "10:1.1":"question",
+      "10:1.2":"question",
+      "10:2.1":"question",
+      "10:1.5":"question",
+      "10:concern:c3":"question",
+      "7:2.1":"question",
+      "6:2.1":"question",
+      "6:1.5":"resolved",
+      "7:1.5":"question"
+    };
+    let reasons=mergePlain(BUILT_IN_REASONS,(()=>{try{return JSON.parse(localStorage.getItem(REASON_KEY)||'{}')}catch(e){return {}}})());
+    let flags=mergePlain(BUILT_IN_FLAGS,(()=>{try{return JSON.parse(localStorage.getItem(FLAG_KEY)||'{}')}catch(e){return {}}})());
     let concernEdits=(()=>{try{
       const saved=JSON.parse(localStorage.getItem(CONCERN_KEY)||'{}');
       return saved&&typeof saved==='object'&&!Array.isArray(saved)?saved:{};
@@ -1346,23 +1417,56 @@
     const PROGRESS_VISIBLE_MAX=2;
     const PROGRESS_KEY='invoice-tracking-progress-v1';
     const SELECTED_KEY='invoice-tracking-progress-selected-v1';
+    const BUILT_IN_PROGRESS=[
+      {id:'wp-1',period:'Sept 2026',notes:{'1.5':'Alta revision','3.1':'Alta reviewing'}},
+      {id:'wp-2',period:'',notes:{}}
+    ];
     function monthValue(period){
       const text=(period||'').trim();
       if(/^\d{4}-\d{2}$/.test(text)) return text;
       const match=text.match(/^(\d{1,2})\/(?:\d{1,2}\/)?(\d{4})/);
       if(match) return match[2]+'-'+String(Number(match[1])).padStart(2,'0');
+      const names={january:1,jan:1,february:2,feb:2,march:3,mar:3,april:4,apr:4,may:5,june:6,jun:6,july:7,jul:7,august:8,aug:8,september:9,sept:9,sep:9,october:10,oct:10,november:11,nov:11,december:12,dec:12};
+      const named=text.match(/^([A-Za-z]+)\s+(\d{4})$/);
+      if(named){
+        const month=names[named[1].toLowerCase()];
+        if(month) return named[2]+'-'+String(month).padStart(2,'0');
+      }
       return '';
     }
     function loadProgress(){
+      const builtIn=clone(BUILT_IN_PROGRESS);
       try{
         const saved=JSON.parse(localStorage.getItem(PROGRESS_KEY)||'null');
         if(Array.isArray(saved)&&saved.length){
-          const sheets=saved.slice(0,PROGRESS_MAX).map(sheet=>({id:sheet.id||('wp-'+Math.random().toString(36).slice(2,8)),period:monthValue(sheet.period)||'',notes:sheet.notes&&typeof sheet.notes==='object'?sheet.notes:{}}));
+          const byId=new Map();
+          const order=[];
+          function add(list,overlay){
+            list.forEach(sheet=>{
+              if(!sheet||!sheet.id) return;
+              if(!byId.has(sheet.id)){
+                order.push(sheet.id);
+                byId.set(sheet.id,{id:sheet.id,period:'',notes:{}});
+              }
+              const cur=byId.get(sheet.id);
+              const period=(sheet.period||'').trim();
+              if(period && (overlay || !cur.period)) cur.period=period;
+              const notes=sheet.notes&&typeof sheet.notes==='object'?sheet.notes:{};
+              Object.keys(notes).forEach(key=>{
+                if(notes[key] && (overlay || !cur.notes[key])) cur.notes[key]=notes[key];
+              });
+            });
+          }
+          add(builtIn,false);
+          add(saved.slice(0,PROGRESS_MAX),true);
+          const sheets=order.map(id=>byId.get(id)).slice(0,PROGRESS_MAX);
           if(sheets.length<2) sheets.push({id:'wp-2',period:'',notes:{}});
           return sheets;
         }
       }catch(e){}
-      return [{id:'wp-1',period:'',notes:{}},{id:'wp-2',period:'',notes:{}}];
+      const sheets=builtIn.slice(0,PROGRESS_MAX);
+      if(sheets.length<2) sheets.push({id:'wp-2',period:'',notes:{}});
+      return sheets;
     }
     let progressSheets=loadProgress();
     let selectedProgressIds=(()=>{
@@ -1492,11 +1596,7 @@
     }
     function newProgressSheet(){return {id:'wp-'+Date.now().toString(36),period:'',notes:{}}}
     function periodInputValue(sheet){
-      const text=(sheet.period||'').trim();
-      const value=monthValue(text);
-      if(!value) return text;
-      const [year,month]=value.split('-').map(Number);
-      return new Date(year,month-1,1).toLocaleDateString('en-US',{month:'short',year:'numeric'});
+      return (sheet.period||'').trim();
     }
     function progressTabLabel(sheet,index){
       const text=(sheet.period||'').trim();
