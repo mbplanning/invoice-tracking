@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
   <title>Invoices and Work Progress</title>
   <style>
     :root{
@@ -20,12 +22,13 @@
       --match-sub:#e4f0e6;
       --note:#5c3b00;
       --invoice-count:2;
-      --panel:680px;
+      --panel:660px;
       --progress:228px;
       --arrow:32px;
       --reason-box:30px;
       --flag:16px;
       --question:#ffd4a8;
+      --mismatch:#c40000;
       --resolved:#cfe9d4;
     }
     *{box-sizing:border-box}
@@ -39,7 +42,7 @@
     .swatch{display:inline-block;width:11px;height:11px;border:1px solid #999;flex-shrink:0}
     .page-header{display:grid;grid-template-columns:var(--arrow) minmax(0,1fr) var(--arrow);align-items:center;gap:12px;width:0;min-width:100%;margin:0 0 8px}
     .page-title{margin:0;font-size:28px;line-height:1.15;font-weight:700;text-align:center;letter-spacing:.01em}
-    .toolbar{display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;gap:12px;width:0;min-width:100%;margin:0 0 8px;font-size:12px}
+    .toolbar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;width:0;min-width:100%;margin:0 0 8px;font-size:12px}
     .today-date{margin:0;font-size:14px;font-weight:700;white-space:nowrap}
     .toolbar-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
     .tool-btn{height:28px;padding:0 10px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:inherit;font-size:11px;cursor:pointer}
@@ -68,41 +71,69 @@
     .progress-period{display:flex;align-items:center;gap:4px;height:20px;min-height:20px;margin-bottom:1px;border-bottom:1px solid var(--rule);font-size:11px;font-weight:700;overflow:hidden}
     .progress-period label{flex:0 0 auto;font-style:italic;font-size:10px}
     .progress-period input{flex:1;min-width:0;height:16px;margin:0;padding:0 2px;border:0;border-bottom:1px solid var(--period);background:transparent;font:inherit;font-size:11px;font-style:italic;text-align:center;color:var(--ink)}
+    .progress-period input::placeholder,.progress-period input::-webkit-input-placeholder{color:#b4b4b4;opacity:1}
     .progress-period input:focus{outline:none;border-bottom-color:var(--ink)}
     .progress-page table{width:100%}
     col.progress-note{width:100%}
     .progress-page thead th{text-align:left}
-    td.progress-note{padding:1px;vertical-align:middle}
-    td.progress-note input{display:block;width:100%;height:var(--reason-box);min-height:var(--reason-box);max-height:var(--reason-box);margin:0;padding:0 2px;border:1px solid #d0d0d0;background:#fff;font:inherit;font-size:9.5px;line-height:1.2}
-    td.progress-note input::placeholder{color:#5a5a5a}
-    tr.summary td.progress-note input{height:16px;min-height:16px;max-height:16px}
-    td.progress-note input:focus{outline:1px solid var(--ink);border-color:var(--ink)}
-    .invoice-page{min-width:0;padding:8px 8px 12px;background:var(--paper);box-shadow:0 2px 12px rgba(0,0,0,.1)}
-    .invoice-title{margin:1px 0 5px;height:26px;font-size:18px;line-height:26px;text-align:center}
-    .billing-period{display:grid;grid-template-columns:minmax(0,1fr) 78px 18px 78px;align-items:end;height:20px;min-height:20px;max-height:20px;margin-bottom:1px;border-bottom:1px solid var(--rule);font-size:11px;font-weight:700;font-style:italic;overflow:hidden}
+    td.progress-note{padding:1px;vertical-align:top}
+    td.progress-note textarea{display:block;width:100%;height:var(--reason-box);min-height:var(--reason-box);max-height:var(--reason-box);margin:0;padding:1px 2px;border:1px solid #d0d0d0;background:#fff;font:inherit;font-size:12px;line-height:1.2;resize:none;overflow-x:hidden;overflow-y:auto;field-sizing:fixed}
+    td.progress-note textarea::placeholder,td.progress-note textarea::-webkit-input-placeholder{color:#b4b4b4;opacity:1}
+    tr.summary td.progress-note textarea{height:16px;min-height:16px;max-height:16px}
+    td.progress-note textarea:focus{outline:1px solid var(--ink);border-color:var(--ink)}
+    td.progress-note textarea.comment-expanded{min-height:72px;max-height:none;overflow-y:auto}
+    .invoice-page{position:relative;min-width:0;padding:8px 8px 12px 42px;background:var(--paper);box-shadow:0 2px 12px rgba(0,0,0,.1)}
+    .task-arrows{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2}
+    .task-arrow-path{fill:none;stroke:#1a4a8a;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+    .task-arrow-preview{fill:none;stroke:#1a4a8a;stroke-width:1.6;stroke-dasharray:4 3;stroke-linejoin:round;stroke-linecap:round}
+    .task-arrow-notes{position:absolute;inset:0;pointer-events:none;z-index:3}
+    .arrow-note{pointer-events:auto;position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;max-width:210px}
+    .arrow-note-toggle,.arrow-note-remove{height:18px;padding:0 7px;border:1px solid #1a4a8a;background:#eef3fb;color:#1a4a8a;font:inherit;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap}
+    .arrow-note-toggle:hover,.arrow-note-remove:hover{background:#dce6f6}
+    .arrow-note.open{background:#fff;border:1px solid #1a4a8a;box-shadow:0 2px 8px rgba(0,0,0,.12);padding:5px;transform:translate(8px,-50%)}
+    .arrow-note.open textarea{display:block;width:196px;height:64px;margin:0;padding:3px;border:1px solid #c8c8c8;font:inherit;font-size:12px;line-height:1.25;resize:none}
+    .arrow-note.open textarea.comment-expanded{min-height:96px;max-height:none}
+    .arrow-note-actions{display:flex;gap:4px;width:100%;justify-content:flex-end}
+    .arrow-note-remove{border-color:#8a8a8a;background:#fafafa;color:#444}
+    .invoice-page.linking{cursor:crosshair}
+    .invoice-page.linking tr.link-source td{box-shadow:inset 0 0 0 1px #1a4a8a}
+    .invoice-page.linking tr.link-target td{background:#e7f0ff}
+    td.description.linkable{display:flex;align-items:flex-start;gap:4px;overflow:visible}
+    td.description .task-label{min-width:0;overflow:visible;white-space:normal;text-overflow:clip;line-height:1.25}
+    .task-link-handle{flex:0 0 8px;width:8px;height:14px;margin-top:2px;padding:0;border:0;background:transparent;cursor:grab;touch-action:none;position:relative}
+    .task-link-handle::after{content:"";position:absolute;left:50%;top:6px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:#111}
+    .task-link-handle:hover::after{background:#1a4a8a}
+    .task-link-handle:active{cursor:grabbing}
+    tr.link-source .task-link-handle::after{background:#c98900}
+    tr.link-target .task-link-handle::after{background:#4a7cc7}
+    .invoice-title{margin:1px 0 5px;height:26px;font-size:20px;line-height:26px;text-align:center}
+    .billing-period{display:grid;grid-template-columns:minmax(0,1fr) 78px 18px 78px;align-items:end;height:20px;min-height:20px;max-height:20px;margin-bottom:1px;border-bottom:1px solid var(--rule);font-size:12px;font-weight:700;font-style:italic;overflow:hidden}
     .billing-period span:first-child{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
     .billing-period .from,.billing-period .to-date,.billing-period .word-to{text-align:center}
     .billing-period .from,.billing-period .to-date{border-bottom:1px solid var(--period);font-style:italic}
     .billing-period .word-to{font-style:normal;font-weight:700}
-    table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10.5px;line-height:1}
-    col.description{width:26%}col.amount{width:10%}col.percent{width:7%}col.money{width:9.5%}col.reason{width:19%}
+    table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;line-height:1.25}
+    col.description{width:28%}col.amount{width:9%}col.percent{width:6.5%}col.money{width:8.5%}col.reason{width:22.5%}
     thead tr{height:32px}
-    thead th{height:32px;max-height:32px;padding:1px 2px 2px;border-bottom:1px solid var(--rule);font-weight:400;line-height:1.1;text-align:right;vertical-align:bottom;overflow:hidden}
+    thead th{height:32px;max-height:32px;padding:1px 1px 2px;border-bottom:1px solid var(--rule);font-weight:400;line-height:1.15;text-align:right;vertical-align:bottom;overflow:hidden}
     thead th:first-child,thead th.reason{text-align:left}
-    tbody tr.item:not(.concern) td{height:calc(var(--reason-box) + 4px);max-height:calc(var(--reason-box) + 4px)}
-    tbody tr.item:not(.concern){height:calc(var(--reason-box) + 4px)}
-    tbody tr.stage{height:18px}tbody tr.subtotal{height:16px}tbody tr.summary{height:20px}tbody tr.spacer{height:10px}tbody tr.grand-total{height:22px}tbody tr.concern{height:auto}
-    tbody td{padding:0 2px;vertical-align:middle}
-    tr.stage td{padding-top:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:clip;height:18px;max-height:18px;line-height:18px}
-    tr.subtotal td{height:16px;max-height:16px}
-    tr.summary td{height:20px;max-height:20px}
-    td.description{overflow:hidden;white-space:nowrap;text-overflow:clip}
+    tbody tr.item:not(.concern) td{min-height:calc(var(--reason-box) + 4px)}
+    tbody tr.item:not(.concern){min-height:calc(var(--reason-box) + 4px)}
+    tbody tr.stage{min-height:18px}tbody tr.subtotal{min-height:16px}tbody tr.summary{min-height:20px}tbody tr.spacer{height:10px}tbody tr.grand-total{min-height:22px}tbody tr.concern{height:auto}
+    tbody td{padding:1px;vertical-align:middle}
+    tr.stage td{padding-top:1px;font-weight:700;white-space:normal;overflow:visible;min-height:18px;line-height:1.25}
+    tr.subtotal td{min-height:16px}
+    tr.summary td{min-height:20px}
+    td.description{overflow:visible;white-space:normal;line-height:1.25}
     td.num{text-align:right;white-space:nowrap}
-    td.reason{padding:1px 2px;vertical-align:middle;height:calc(var(--reason-box) + 4px);max-height:calc(var(--reason-box) + 4px)}
-    td.reason .reason-wrap{display:flex;align-items:center;gap:3px;width:100%;height:var(--reason-box)}
-    td.reason textarea,td.reason .reason-slot{display:block;box-sizing:border-box;flex:1;min-width:0;width:auto;height:var(--reason-box);min-height:var(--reason-box);max-height:var(--reason-box);margin:0;padding:1px 3px;border:1px solid #c8c8c8;background:#fff;color:var(--ink);font:inherit;font-size:9.5px;line-height:1.2;resize:none;overflow-x:hidden;overflow-y:auto;field-sizing:fixed}
+    td.reason{padding:1px;vertical-align:top;min-height:calc(var(--reason-box) + 4px)}
+    td.reason .reason-wrap{display:flex;align-items:flex-start;gap:3px;width:100%;height:var(--reason-box)}
+    td.reason .reason-wrap.comment-expanded{height:auto}
+    td.reason textarea,td.reason .reason-slot{display:block;box-sizing:border-box;flex:1;min-width:0;width:auto;height:var(--reason-box);min-height:var(--reason-box);max-height:var(--reason-box);margin:0;padding:1px 3px;border:1px solid #c8c8c8;background:#fff;color:var(--ink);font:inherit;font-size:12px;line-height:1.2;resize:none;overflow-x:hidden;overflow-y:auto;field-sizing:fixed}
+    td.reason textarea.comment-expanded{min-height:72px;max-height:none}
     td.reason .reason-slot{border-color:#e0e0e0;background:#fafafa}
     td.reason textarea:focus{outline:1px solid var(--ink);border-color:var(--ink)}
+    input::placeholder,textarea::placeholder,input::-webkit-input-placeholder,textarea::-webkit-input-placeholder{color:#b4b4b4;opacity:1}
     td.reason[data-flag="question"] textarea{background:var(--question);border-color:#c98900}
     td.reason[data-flag="resolved"] textarea{background:var(--resolved);border-color:#3d7a45}
     .reason-flag,.reason-flag-spacer{flex:0 0 var(--flag);width:var(--flag);height:var(--flag);padding:0}
@@ -111,7 +142,7 @@
     .reason-flag:hover{background:#ececec;border-color:#888}
     td.reason[data-flag="question"] .reason-flag{background:var(--question);border-color:#c98900;color:#7a4a00}
     td.reason[data-flag="resolved"] .reason-flag{background:var(--resolved);border-color:#3d7a45;color:#276221}
-    tr.concern td.concern-text{white-space:normal;overflow:visible;font-size:10px;line-height:1.3;padding:4px 3px 5px;vertical-align:top}
+    tr.concern td.concern-text{white-space:normal;overflow:visible;font-size:inherit;line-height:1.25;padding:4px 3px 5px;vertical-align:top}
     tr.subtotal td,tr.summary td{background:var(--subtotal);font-weight:700}
     tr.grand-total td{padding-top:3px;border-top:1px solid var(--rule);border-bottom:3px double var(--rule);font-weight:700}
     td.pct-change{background:var(--pct-change)}
@@ -125,23 +156,26 @@
     tr.subtotal td.same-col,tr.summary td.same-col,tr.grand-total td.same-col{background:var(--match-sub)}
     tr.hover td.same-col,tr.hover td.same-col.this-period,tr.hover td.same-col.pct-change{background:var(--match-fill)}
     tr.subtotal.hover td.same-col,tr.summary.hover td.same-col{background:var(--match-sub)}
-    @media(min-width:1600px){table{font-size:11px}:root{--panel:720px}}
+    td.prior-mismatch{text-decoration:underline;text-decoration-color:var(--mismatch);text-decoration-thickness:2px;text-underline-offset:2px}
+    @media(min-width:1600px){table{font-size:12.5px}:root{--panel:700px}}
     @media(max-width:760px){.page{padding:0}.comparison-grid{gap:6px}.invoice-page{box-shadow:none}}
     @media print{
       @page{size:legal landscape;margin:.28in}
       body{background:#fff}
       .page{padding:0;overflow:visible}
       .notes,.legend{break-inside:avoid;margin-left:0}
-      .toolbar .tool-btn,.save-status,.nav-arrow,.progress-head,.progress-delete{display:none}
+      .toolbar .tool-btn,.save-status,.nav-arrow,.progress-head,.progress-delete,.task-link-handle{display:none}
       .page-header{display:block}
       .comparison-grid{width:100%;gap:8px}
-      .invoice-page,.progress-stack,.progress-page{padding:4px;box-shadow:none}
+      .invoice-page{padding:4px 4px 4px 28px;box-shadow:none}
+      .progress-stack,.progress-page{padding:4px;box-shadow:none}
       .invoice-title,.page-title{font-size:13px}
       table,.billing-period{font-size:8px}
       td.this-period,td.pct-change{background:#eee !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       td.reason[data-flag="question"] textarea,td.reason[data-flag="question"] .reason-flag{background:var(--question) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       td.reason[data-flag="resolved"] textarea,td.reason[data-flag="resolved"] .reason-flag{background:var(--resolved) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       th.same-col,td.same-col{background:var(--match-fill) !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      td.prior-mismatch{text-decoration:underline;text-decoration-color:var(--mismatch) !important}
     }
   </style>
 </head>
@@ -167,12 +201,14 @@
       </div>
       <p class="legend">
         <span><i class="swatch" style="background:var(--match-fill);border-color:var(--match)"></i> Total billed (left) = Prior billed (right)</span>
+        <span>Red underline: Prior billed does not match the previous invoice’s Total billed (printed figure left as-is)</span>
         <span><i class="swatch" style="background:var(--this-period)"></i> Current billed this period, and percent complete on the right invoice</span>
         <span><i class="swatch" style="background:var(--pct-change)"></i> Percent complete changed from prior invoice</span>
         <span>Hover a row to line it up across invoices</span>
         <span>Work progress tabs sit on that column. Select none or one tab for one sheet; select two tabs to show two sheets. Use + to add a month</span>
         <span><i class="swatch" style="background:var(--question)"></i> ? marks a PM comment as a question; click again to mark resolved</span>
         <span><i class="swatch" style="background:var(--resolved)"></i> Question resolved</span>
+        <span>Drag the dot at the start of a task to another task it was billed to. Open the note on the arrow; Close folds it</span>
       </p>
       <p class="notes" id="source-notes"></p>
       <div class="comparison-shell">
@@ -232,6 +268,113 @@
 
     // Printed invoice values: percent, total billed, remaining, prior billed, current billed.
     const invoices=[
+      {
+        number:6,
+        id:'26-7379',
+        start:'1/1/2026',end:'1/31/2026',
+        isoStart:'2026-01-01',isoEnd:'2026-01-31',
+        printedDate:'1/31/2026',
+        letterDate:'January 31, 2026',
+        source:'2026 01 inv 7379 Ewa Development_24020 CLIENT_P1.pdf',
+        values:{
+          '1.1':['29%','1,308.75','3,257.25','1,308.75','-'],
+          '1.2':['54%','6,668.75','5,583.25','6,668.75','-'],
+          '1.3':['47%','2,987.50','3,360.50','2,916.25','71.25'],
+          '1.4':['17%','517.50','2,492.50','337.50','180.00'],
+          '1.5':['19%','10,635.00','45,135.00','9,116.25','1,518.75'],
+          s1:['27%','22,117.50','59,828.50','20,347.50','1,770.00'],
+          '2.1':['50%','35,050.00','35,517.00','33,253.75','1,796.25'],
+          '2.2':['36%','6,806.25','11,977.75','5,737.50','1,068.75'],
+          s2:['47%','41,856.25','47,494.75','38,991.25','2,865.00'],
+          '3.1':['21%','1,151.25','4,449.75','1,151.25','-'],
+          '3.2':['99%','3,463.75','26.25','3,463.75','-'],
+          '3.3':['37%','1,777.50','3,052.50','1,642.50','135.00'],
+          '3.4':['69%','7,676.25','3,493.75','6,316.25','1,360.00'],
+          '3.5':['21%','1,037.50','3,942.50','-','1,037.50'],
+          '3.6':['8%','1,901.25','21,472.75','1,901.25','-'],
+          '3.7':['0%','210.00','43,668.00','210.00','-'],
+          '3.8':['0%','-','15,966.00','-','-'],
+          '3.9':['0%','-','13,876.00','-','-'],
+          '3.10':['0%','-','14,834.00','-','-'],
+          '3.11':['0%','-','13,053.00','-','-'],
+          '3.12':['0%','-','7,283.00','-','-'],
+          s3:['11%','17,217.50','145,117.50','14,685.00','2,532.50'],
+          '4.1':['0%','-','4,210.00','-','-'],
+          '4.2':['0%','-','6,050.00','-','-'],
+          '4.3':['0%','-','9,917.00','-','-'],
+          '4.4':['0%','-','8,590.00','-','-'],
+          s4:['0%','-','28,767.00','-','-'],
+          '5.1':['70%','2,248.75','982.25','2,248.75','-'],
+          '5.2':['0%','-','41,672.00','-','-'],
+          s5:['5%','2,248.75','42,654.25','2,248.75','-'],
+          '6.1':['0%','-','79,256.00','-','-'],
+          '6.2':['0%','-','35,145.00','-','-'],
+          '6.3':['0%','-','9,240.00','-','-'],
+          '6.4':['0%','-','13,877.00','-','-'],
+          s6:['0%','-','137,518.00','-','-'],
+          get:['15%','3,931.68','21,740.32','3,593.95','337.73'],
+          reimb:['0%','-','9,500.00','-','-'],
+          cont:['0%','-','10,000.00','-','-'],
+          total:['15%','87,371.68','502,620.32','79,866.45','7,505.23']
+        },
+        concerns:[
+          {id:'c1',text:'Meeting was held on 2/5 with DPP to discuss management of the budget for Task 2.1.'}
+        ]
+      },
+      {
+        number:7,
+        id:'304.RA24020.001-001',
+        start:'2/1/2026',end:'3/31/2026',
+        isoStart:'2026-02-01',isoEnd:'2026-03-31',
+        printedDate:'4/20/2026',
+        letterDate:'April 23, 2026',
+        source:'Invoice 304.RA24020.001-1.pdf',
+        values:{
+          '1.1':['29%','1,308.75','3,257.25','1,308.75','-'],
+          '1.2':['71%','8,675.06','3,576.94','6,668.75','2,006.31'],
+          '1.3':['56%','3,543.03','2,804.97','2,987.50','555.53'],
+          '1.4':['25%','742.50','2,267.50','517.50','225.00'],
+          '1.5':['45%','25,207.19','30,562.81','10,635.00','14,572.19'],
+          s1:['48%','39,476.53','42,469.47','22,117.50','17,359.03'],
+          '2.1':['69%','48,957.79','21,609.21','35,050.00','13,907.79'],
+          '2.2':['41%','7,705.57','11,078.43','6,806.25','899.32'],
+          s2:['63%','56,663.36','32,687.64','41,856.25','14,807.11'],
+          '3.1':['21%','1,151.25','4,449.75','1,151.25','-'],
+          '3.2':['99%','3,463.75','26.25','3,463.75','-'],
+          '3.3':['37%','1,777.50','3,052.50','1,777.50','-'],
+          '3.4':['97%','10,836.25','333.75','7,676.25','3,160.00'],
+          '3.5':['59%','2,925.00','2,055.00','1,037.50','1,887.50'],
+          '3.6':['8%','1,901.25','21,472.75','1,901.25','-'],
+          '3.7':['0%','210.00','43,668.00','210.00','-'],
+          '3.8':['0%','-','15,966.00','-','-'],
+          '3.9':['0%','-','13,876.00','-','-'],
+          '3.10':['0%','-','14,834.00','-','-'],
+          '3.11':['0%','-','13,053.00','-','-'],
+          '3.12':['0%','-','7,283.00','-','-'],
+          s3:['14%','22,265.00','140,070.00','17,217.50','5,047.50'],
+          '4.1':['0%','-','4,210.00','-','-'],
+          '4.2':['0%','-','6,050.00','-','-'],
+          '4.3':['0%','-','9,917.00','-','-'],
+          '4.4':['0%','-','8,590.00','-','-'],
+          s4:['0%','-','28,767.00','-','-'],
+          '5.1':['70%','2,248.75','982.25','2,248.75','-'],
+          '5.2':['0%','-','41,672.00','-','-'],
+          s5:['5%','2,248.75','42,654.25','2,248.75','-'],
+          '6.1':['0%','-','79,256.00','-','-'],
+          '6.2':['0%','-','35,145.00','-','-'],
+          '6.3':['0%','-','9,240.00','-','-'],
+          '6.4':['0%','-','13,877.00','-','-'],
+          s6:['0%','-','137,518.00','-','-'],
+          get:['22%','5,697.01','19,974.99','3,931.68','1,765.33'],
+          reimb:['3%','250.90','9,249.10','-','250.90'],
+          cont:['0%','-','10,000.00','-','-'],
+          total:['21%','126,601.55','463,390.45','87,371.68','39,229.87']
+        },
+        concerns:[
+          {id:'c1',text:'Due to the additional website enhancements requested by DPP, effort for Task 3.4 exceeded the task budget. The additional effort was billed to Task 2.1.'},
+          {id:'c2',text:'The team has spent over 12 hours collaborating with DPP and HoLIS on setting up the AGOL, including coordination, review of GIS data, setting up a structure and strategy for collaborating with HoLIS on mapping. This is time that was not anticipated in the original scope but was performed because it is important to enable us to collaborate in the future. For now, we are billing these hours to Task 1.5 but may need to consider billing to the contingency should additional time be needed for Task 1.5 deliverables.'}
+        ]
+      },
       {
         number:8,
         id:'304.RA24020.001-002',
@@ -342,21 +485,87 @@
           {id:'c4',text:'The budget for Task 3.4 (Website) is depleted. Future website-related work will require use of the project contingency.'},
           {id:'c5',text:'Please note that the data provided by HoLIS for the network analysis maps as part of Task 3.5 (Neighborhood Profiles) did not produce accurate maps, which led to rework. R+A has used an alternate QGIS process to complete the network analysis maps, since we calculated that this would be more efficient and less costly than trying to resolve the data/process issue with HoLIS. To streamline the process for future mapping, we can discuss this issue with HoLIS and DPP.'}
         ]
+      },
+      {
+        number:10,
+        id:'304.RA24020.001-004',
+        start:'5/23/2026',end:'6/30/2026',
+        isoStart:'2026-05-23',isoEnd:'2026-06-30',
+        printedDate:'8/17/2026',
+        letterDate:'August 14, 2026',
+        source:'Invoice 000000000004 Project 304.RA24020.001.pdf',
+        values:{
+          '1.1':['49%','2,249.74','2,316.26','2,249.74','-'],
+          '1.2':['100%','12,223.45','28.55','7,852.45','4,371.00'],
+          '1.3':['98%','6,226.65','121.35','5,422.65','804.00'],
+          '1.4':['99%','2,992.50','17.50','2,992.50','-'],
+          '1.5':['87%','48,634.93','7,134.07','39,158.23','9,476.70'],
+          s1:['88%','72,327.27','9,617.73','58,200.58','14,651.70'],
+          '2.1':['82%','57,744.04','12,822.46','53,874.04','3,345.00'],
+          '2.2':['50%','9,306.70','9,476.80','8,046.70','1,260.00'],
+          s2:['75%','67,050.74','22,299.26','61,920.74','4,605.00'],
+          '3.1':['71%','3,966.90','1,635.10','1,616.25','2,350.65'],
+          '3.2':['99%','3,463.75','26.25','3,463.75','-'],
+          '3.3':['95%','4,591.25','238.75','4,591.25','-'],
+          '3.4':['97%','10,876.25','293.75','10,876.25','-'],
+          '3.5':['99%','4,950.00','30.00','4,950.00','-'],
+          '3.6':['24%','5,576.25','17,798.25','1,901.25','3,675.00'],
+          '3.7':['0%','210.00','43,668.50','210.00','-'],
+          '3.8':['0%','-','15,966.00','-','-'],
+          '3.9':['0%','-','13,876.00','-','-'],
+          '3.10':['0%','-','14,834.00','-','-'],
+          '3.11':['0%','-','13,053.00','-','-'],
+          '3.12':['0%','-','7,283.00','-','-'],
+          s3:['21%','33,634.40','128,702.60','27,608.75','6,025.65'],
+          '4.1':['0%','-','4,210.00','-','-'],
+          '4.2':['0%','-','7,107.00','-','-'],
+          '4.3':['0%','-','8,860.00','-','-'],
+          '4.4':['0%','-','8,590.00','-','-'],
+          s4:['0%','-','28,767.00','-','-'],
+          '5.1':['70%','2,248.75','982.25','2,248.75','-'],
+          '5.2':['0%','-','41,672.00','-','-'],
+          s5:['5%','2,248.75','42,654.25','2,248.75','-'],
+          '6.1':['0%','-','79,256.00','-','-'],
+          '6.2':['0%','-','35,146.00','-','-'],
+          '6.3':['0%','-','9,240.00','-','-'],
+          '6.4':['0%','-','13,876.00','-','-'],
+          s6:['0%','-','137,518.00','-','-'],
+          get:['35%','9,091.70','16,580.30','7,171.47','1,920.23'],
+          reimb:['4%','378.27','9,121.73','250.90','127.37'],
+          cont:['20%','1,966.25','8,033.75','1,966.25','-'],
+          total:['32%','186,697.38','403,294.62','159,367.44','27,329.95']
+        },
+        concerns:[
+          {id:'c1',text:'The direct expense was to mail the executed contract reassignment to DPP because the County does not permit electronic signatures.'},
+          {id:'c2',text:'Note that previous invoices from Fehr & Peers mistakenly included the GET in work task billing. That will be corrected the next time an invoice is received from Fehr & Peers.'},
+          {id:'c3',text:'As of the end of June, the effort for the following tasks have exceeded the task budget due, in part, to work done outside of the scope: Task 1.3 Data Collection and Base Map, Task 1.5 Topic-Specific Fact Sheets and Technical Memos, Task 3.1 Engagement Strategy Memo, Task 3.4 Project Website, and Task 3.5 Neighborhood Profiles.'}
+        ]
       }
     ];
 
     const PAIR=2;
-    const ordered=[...invoices].sort((a,b)=>a.number-b.number);
+    try{localStorage.removeItem('invoice-tracking-imported-v1')}catch(e){}
+    const ordered=invoices.slice().sort((a,b)=>a.number-b.number);
     let startIndex=Math.max(0,ordered.length-1);
     document.querySelector('#source-notes').innerHTML=
       '<strong>Numbers are copied from the printed invoices, not recalculated.</strong> '+
+      'Invoice 6 (January 1–31, 2026, invoice 26-7379) is copied from the printed billing table; Invoice 7 Prior Billed matches Invoice 6 Total Billed. '+
+      'Invoice 7 (February 1–March 31, 2026) is copied from the printed billing table; Invoice 8 Prior Billed matches Invoice 7 Total Billed. '+
       'Invoice 8 GET Total Billed is <strong>$0.01 more</strong> than Prior + Current; Invoice 9 is internally consistent and carries that printed GET total forward. '+
-      'Task 5.2 is clipped on both invoices after “Frameworks, a”. Hover a clipped description for the source note.';
+      'Invoice 10 (May 23–June 30, 2026) is copied from the printed billing table. Invoice 10 Prior Billed does not match Invoice 9 Total Billed on <strong>1.1</strong> ($2,249.74 vs $1,308.75), <strong>1.2</strong> ($7,852.45 vs $8,793.45), <strong>Stage 1 subtotal</strong> ($58,200.58 vs $57,675.58), <strong>2.1</strong> ($53,874.04 vs $54,399.04), and <strong>Stage 2 subtotal</strong> ($61,920.74 vs $62,445.74). Those printed figures were left as-is. '+
+      'Task 5.2 is clipped on the printed invoices after “Frameworks, a”. Hover a clipped description for the source note.';
 
     const grid=document.querySelector('#comparison-grid');
     const prevBtn=document.querySelector('#nav-prev');
     const nextBtn=document.querySelector('#nav-next');
     const moneyActive=v=>v && v!=='-' && v!=='0' && v!=='0.00';
+    function parseMoneyNumber(value){
+      if(value==null) return null;
+      const text=String(value).trim();
+      if(!text||text==='-'||text==='—') return 0;
+      const num=Number(text.replace(/[$,]/g,''));
+      return Number.isFinite(num)?num:null;
+    }
     const clone=value=>JSON.parse(JSON.stringify(value));
     const REASON_KEY='invoice-tracking-reasons-v1';
     const FLAG_KEY='invoice-tracking-flags-v1';
@@ -368,6 +577,213 @@
     function getReason(invoiceNumber,rowKey){return reasons[reasonStoreKey(invoiceNumber,rowKey)]||''}
     function persistReasons(){localStorage.setItem(REASON_KEY,JSON.stringify(reasons))}
     function persistFlags(){localStorage.setItem(FLAG_KEY,JSON.stringify(flags))}
+    const LINKS_KEY='invoice-tracking-bill-links-v1';
+    function normalizeLinks(saved){
+      const out={};
+      if(!saved||typeof saved!=='object'||Array.isArray(saved)) return out;
+      for(const [key,list] of Object.entries(saved)){
+        if(!Array.isArray(list)) continue;
+        out[key]=list.map(item=>({
+          id:item&&item.id?String(item.id):('lnk-'+Math.random().toString(36).slice(2,8)),
+          from:item&&item.from!=null?String(item.from):'',
+          to:item&&item.to!=null?String(item.to):'',
+          note:item&&typeof item.note==='string'?item.note:'',
+          open:!!(item&&item.open)
+        })).filter(item=>item.from&&item.to&&item.from!==item.to);
+      }
+      return out;
+    }
+    let billLinks=(()=>{try{return normalizeLinks(JSON.parse(localStorage.getItem(LINKS_KEY)||'{}'))}catch(e){return {}}})();
+    function persistLinks(){localStorage.setItem(LINKS_KEY,JSON.stringify(billLinks))}
+    function linksFor(invoiceNumber){
+      const key=String(invoiceNumber);
+      if(!Array.isArray(billLinks[key])) billLinks[key]=[];
+      return billLinks[key];
+    }
+    function taskShortLabel(key){
+      const row=rows.find(item=>Array.isArray(item)&&item[0]===key);
+      if(!row) return key;
+      const label=row[1];
+      const cut=label.indexOf(':');
+      return cut>0?label.slice(0,cut):label;
+    }
+    function canLinkRow(kind,key){
+      if(!kind) return true;
+      return kind==='summary'&&(key==='get'||key==='reimb'||key==='cont');
+    }
+    function addBillLink(invoiceNumber,from,to){
+      if(!from||!to||from===to) return;
+      const list=linksFor(invoiceNumber);
+      if(list.some(item=>item.from===from&&item.to===to)) return;
+      list.push({id:'lnk-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),from,to,note:'',open:true});
+      persistLinks();
+    }
+    function updateBillLink(invoiceNumber,id,patch){
+      const item=linksFor(invoiceNumber).find(link=>link.id===id);
+      if(!item) return;
+      Object.assign(item,patch);
+      persistLinks();
+    }
+    function removeBillLink(invoiceNumber,id){
+      billLinks[String(invoiceNumber)]=linksFor(invoiceNumber).filter(item=>item.id!==id);
+      persistLinks();
+    }
+    function articlePoint(article,clientX,clientY){
+      const box=article.getBoundingClientRect();
+      return {x:clientX-box.left,y:clientY-box.top};
+    }
+    function handlePoint(article,handle){
+      const box=article.getBoundingClientRect();
+      const hit=handle.getBoundingClientRect();
+      return {x:hit.left+hit.width/2-box.left,y:hit.top+hit.height/2-box.top};
+    }
+    function elbowPath(sx,sy,tx,ty,gutter){
+      const clear=12;
+      const startX=sx-clear;
+      const endX=tx-clear;
+      const gx=Math.min(startX,endX)-gutter;
+      return `M${startX.toFixed(1)},${sy.toFixed(1)} L${gx.toFixed(1)},${sy.toFixed(1)} L${gx.toFixed(1)},${ty.toFixed(1)} L${endX.toFixed(1)},${ty.toFixed(1)}`;
+    }
+    function addArrowMarker(defs,id,refX){
+      const marker=document.createElementNS('http://www.w3.org/2000/svg','marker');
+      marker.setAttribute('id',id);
+      marker.setAttribute('markerWidth','8');
+      marker.setAttribute('markerHeight','8');
+      marker.setAttribute('refX',String(refX));
+      marker.setAttribute('refY','4');
+      marker.setAttribute('orient','auto');
+      marker.setAttribute('markerUnits','userSpaceOnUse');
+      const tip=document.createElementNS('http://www.w3.org/2000/svg','path');
+      tip.setAttribute('d','M0,0 L8,4 L0,8 Z');
+      tip.setAttribute('fill','#1a4a8a');
+      marker.appendChild(tip);
+      defs.appendChild(marker);
+    }
+    function linkKeyFromPoint(article,clientX,clientY,fromKey){
+      const el=document.elementFromPoint(clientX,clientY);
+      if(!el||!article.contains(el)) return '';
+      const tr=el.closest('tr[data-key]');
+      if(!tr||!article.contains(tr)||!tr.querySelector('.task-link-handle')) return '';
+      const key=tr.dataset.key;
+      return key&&key!==fromKey?key:'';
+    }
+    function paintInvoiceLinks(article){
+      const invoiceNumber=article.dataset.invoiceNumber;
+      if(!invoiceNumber) return;
+      const svg=article.querySelector('.task-arrows');
+      const layer=article.querySelector('.task-arrow-notes');
+      if(!svg||!layer) return;
+      const outId='task-arrow-out-'+invoiceNumber;
+      const headId='task-arrowhead-'+invoiceNumber;
+      svg.replaceChildren();
+      const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+      addArrowMarker(defs,outId,0.5);
+      addArrowMarker(defs,headId,7);
+      svg.appendChild(defs);
+      layer.replaceChildren();
+      linksFor(invoiceNumber).forEach((link,index)=>{
+        const fromHandle=article.querySelector(`tr[data-key="${link.from}"] .task-link-handle`);
+        const toHandle=article.querySelector(`tr[data-key="${link.to}"] .task-link-handle`);
+        if(!fromHandle||!toHandle) return;
+        const from=handlePoint(article,fromHandle);
+        const to=handlePoint(article,toHandle);
+        const gutter=14+(index%5)*7;
+        const gx=Math.min(from.x,to.x)-gutter;
+        const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('class','task-arrow-path');
+        path.setAttribute('d',elbowPath(from.x,from.y,to.x,to.y,gutter));
+        path.setAttribute('marker-start','url(#'+outId+')');
+        path.setAttribute('marker-end','url(#'+headId+')');
+        svg.appendChild(path);
+        const note=document.createElement('div');
+        note.className='arrow-note'+(link.open?' open':'');
+        note.style.left=link.open?(gx+'px'):(gx+'px');
+        note.style.top=((from.y+to.y)/2+(index%2?6:-6))+'px';
+        if(link.open){
+          const input=document.createElement('textarea');
+          input.placeholder='Note: billed '+taskShortLabel(link.from)+' to '+taskShortLabel(link.to)+'. When was this approved?';
+          input.setAttribute('aria-label','Billing arrow note from '+taskShortLabel(link.from)+' to '+taskShortLabel(link.to));
+          input.value=link.note;
+          input.addEventListener('input',()=>{
+            updateBillLink(invoiceNumber,link.id,{note:input.value});
+            if(input.classList.contains('comment-expanded')) expandComment(input);
+          });
+          bindExpandableComment(input);
+          const actions=document.createElement('div');
+          actions.className='arrow-note-actions';
+          const closeBtn=document.createElement('button');
+          closeBtn.type='button';
+          closeBtn.className='arrow-note-toggle';
+          closeBtn.textContent='Close';
+          closeBtn.addEventListener('click',()=>{updateBillLink(invoiceNumber,link.id,{open:false});paintInvoiceLinks(article)});
+          const removeBtn=document.createElement('button');
+          removeBtn.type='button';
+          removeBtn.className='arrow-note-remove';
+          removeBtn.textContent='Remove';
+          removeBtn.addEventListener('click',()=>{removeBillLink(invoiceNumber,link.id);paintInvoiceLinks(article)});
+          actions.append(closeBtn,removeBtn);
+          note.append(input,actions);
+        }else{
+          const openBtn=document.createElement('button');
+          openBtn.type='button';
+          openBtn.className='arrow-note-toggle';
+          openBtn.textContent='Open';
+          openBtn.title=link.note||('Billed '+taskShortLabel(link.from)+' to '+taskShortLabel(link.to));
+          openBtn.setAttribute('aria-label','Open billing note from '+taskShortLabel(link.from)+' to '+taskShortLabel(link.to));
+          openBtn.addEventListener('click',()=>{updateBillLink(invoiceNumber,link.id,{open:true});paintInvoiceLinks(article)});
+          note.appendChild(openBtn);
+        }
+        layer.appendChild(note);
+      });
+    }
+    function startLinkDrag(article,invoiceNumber,handle,event){
+      const fromKey=handle.closest('tr').dataset.key;
+      const start=handlePoint(article,handle);
+      article.classList.add('linking');
+      handle.closest('tr').classList.add('link-source');
+      const svg=article.querySelector('.task-arrows');
+      const preview=document.createElementNS('http://www.w3.org/2000/svg','path');
+      preview.setAttribute('class','task-arrow-preview');
+      preview.setAttribute('marker-start','url(#task-arrow-out-'+invoiceNumber+')');
+      preview.setAttribute('marker-end','url(#task-arrowhead-'+invoiceNumber+')');
+      svg.appendChild(preview);
+      let lastTarget=null;
+      function highlight(key){
+        if(lastTarget) lastTarget.classList.remove('link-target');
+        lastTarget=key?article.querySelector(`tr[data-key="${key}"]`):null;
+        if(lastTarget) lastTarget.classList.add('link-target');
+      }
+      function move(ev){
+        const point=articlePoint(article,ev.clientX,ev.clientY);
+        preview.setAttribute('d',elbowPath(start.x,start.y,point.x,point.y,16));
+        highlight(linkKeyFromPoint(article,ev.clientX,ev.clientY,fromKey));
+      }
+      function end(ev){
+        window.removeEventListener('pointermove',move);
+        window.removeEventListener('pointerup',end);
+        preview.remove();
+        article.classList.remove('linking');
+        article.querySelectorAll('.link-source,.link-target').forEach(el=>el.classList.remove('link-source','link-target'));
+        const moved=Math.hypot(ev.clientX-event.clientX,ev.clientY-event.clientY)>4;
+        const toKey=moved?linkKeyFromPoint(article,ev.clientX,ev.clientY,fromKey):'';
+        if(toKey){
+          addBillLink(invoiceNumber,fromKey,toKey);
+          paintInvoiceLinks(article);
+        }
+      }
+      window.addEventListener('pointermove',move);
+      window.addEventListener('pointerup',end);
+    }
+    function bindTaskLinks(article,invoiceNumber){
+      article.dataset.invoiceNumber=String(invoiceNumber);
+      article.addEventListener('pointerdown',event=>{
+        const handle=event.target.closest('.task-link-handle');
+        if(!handle||!article.contains(handle)) return;
+        event.preventDefault();
+        startLinkDrag(article,invoiceNumber,handle,event);
+      });
+      paintInvoiceLinks(article);
+    }
     function setReason(invoiceNumber,rowKey,value){
       const k=reasonStoreKey(invoiceNumber,rowKey);
       if(value) reasons[k]=value; else delete reasons[k];
@@ -401,6 +817,51 @@
         btn.setAttribute('aria-pressed','false');
       }
     }
+    const COMMENT_EXPAND_MAX=200;
+    function commentNeedsExpand(el){
+      if(!el||!((el.value||'').trim())) return false;
+      return el.scrollHeight>el.clientHeight+2;
+    }
+    function relayoutComments(el){
+      requestAnimationFrame(()=>{
+        syncAlignedRows();
+        if(el&&el.closest('.arrow-note')) return;
+        document.querySelectorAll('.invoice-page').forEach(paintInvoiceLinks);
+      });
+    }
+    function collapseComment(el){
+      el.classList.remove('comment-expanded');
+      el.style.height='';
+      el.style.maxHeight='';
+      const wrap=el.closest('.reason-wrap');
+      if(wrap){
+        wrap.classList.remove('comment-expanded');
+        wrap.style.height='';
+      }
+    }
+    function expandComment(el){
+      el.classList.add('comment-expanded');
+      const wrap=el.closest('.reason-wrap');
+      if(wrap){
+        wrap.classList.add('comment-expanded');
+        wrap.style.height='auto';
+      }
+      el.style.maxHeight='none';
+      el.style.height='auto';
+      el.style.height=Math.min(Math.max(el.scrollHeight,72),COMMENT_EXPAND_MAX)+'px';
+    }
+    function bindExpandableComment(el){
+      el.setAttribute('title',(el.getAttribute('title')?el.getAttribute('title')+' ':'')+'Double-click to expand if there is more text; double-click again to collapse');
+      el.addEventListener('mousedown',e=>{if(e.detail>1) e.preventDefault()});
+      el.addEventListener('dblclick',e=>{
+        e.preventDefault();
+        e.stopPropagation();
+        if(el.classList.contains('comment-expanded')) collapseComment(el);
+        else if(commentNeedsExpand(el)) expandComment(el);
+        else return;
+        relayoutComments(el);
+      });
+    }
     function reasonCell(invoiceNumber,rowKey,enabled,placeholder){
       const td=document.createElement('td');
       td.className='reason';
@@ -419,10 +880,14 @@
       }
       const input=document.createElement('textarea');
       input.rows=1;
-      input.placeholder=placeholder;
-      input.setAttribute('aria-label',placeholder);
+      if(placeholder) input.placeholder=placeholder;
+      input.setAttribute('aria-label',placeholder||'PM comment');
       input.value=getReason(invoiceNumber,rowKey);
-      input.addEventListener('input',()=>setReason(invoiceNumber,rowKey,input.value));
+      input.addEventListener('input',()=>{
+        setReason(invoiceNumber,rowKey,input.value);
+        if(input.classList.contains('comment-expanded')) expandComment(input);
+      });
+      bindExpandableComment(input);
       const btn=document.createElement('button');
       btn.type='button';
       btn.className='reason-flag';
@@ -479,6 +944,7 @@
       return {
         reasons:clone(reasons),
         flags:clone(flags),
+        billLinks:clone(billLinks),
         progressSheets:clone(progressSheets),
         selectedProgressIds:clone(selectedProgressIds),
         startIndex
@@ -516,6 +982,7 @@
     function applyState(state){
       reasons=state.reasons&&typeof state.reasons==='object'?clone(state.reasons):{};
       flags=state.flags&&typeof state.flags==='object'?clone(state.flags):{};
+      billLinks=normalizeLinks(state.billLinks);
       progressSheets=Array.isArray(state.progressSheets)&&state.progressSheets.length
         ?clone(state.progressSheets).slice(0,PROGRESS_MAX)
         :[{id:'wp-1',period:'',notes:{}},{id:'wp-2',period:'',notes:{}}];
@@ -525,6 +992,7 @@
       if(typeof state.startIndex==='number') startIndex=state.startIndex;
       persistReasons();
       persistFlags();
+      persistLinks();
       saveProgress();
     }
     function saveCheckpoint(){
@@ -533,6 +1001,7 @@
       if(last && sameState(last,state)){
         persistReasons();
         persistFlags();
+        persistLinks();
         saveProgress();
         flashStatus('Already saved');
         updateHistoryButtons();
@@ -543,6 +1012,7 @@
       persistHistory();
       persistReasons();
       persistFlags();
+      persistLinks();
       saveProgress();
       flashStatus('Progress saved');
       updateHistoryButtons();
@@ -638,16 +1108,18 @@
           tr.dataset.key=key;
           const td=document.createElement('td');
           td.className='progress-note';
-          const canNote=!kind || kind==='summary';
-          if(canNote){
-            const input=document.createElement('input');
-            input.type='text';
-            input.placeholder=label;
-            input.setAttribute('aria-label','Notes for '+label);
-            input.value=sheet.notes[key]||'';
-            input.addEventListener('input',()=>{sheet.notes[key]=input.value;saveProgress()});
-            td.appendChild(input);
-          }
+          const input=document.createElement('textarea');
+          input.rows=1;
+          input.placeholder=label;
+          input.setAttribute('aria-label','Notes for '+label);
+          input.value=sheet.notes[key]||'';
+          input.addEventListener('input',()=>{
+            sheet.notes[key]=input.value;
+            saveProgress();
+            if(input.classList.contains('comment-expanded')) expandComment(input);
+          });
+          bindExpandableComment(input);
+          td.appendChild(input);
           tr.appendChild(td);
         }
         tbody.appendChild(tr);
@@ -747,6 +1219,8 @@
       article.setAttribute('aria-labelledby',`invoice-${invoice.number}-title`);
       const sameTitle='Total billed on the older invoice is Prior billed on the newer invoice';
       article.innerHTML=
+        `<svg class="task-arrows" aria-hidden="true"></svg>`+
+        `<div class="task-arrow-notes"></div>`+
         `<h1 class="invoice-title" id="invoice-${invoice.number}-title">Invoice #${invoice.number}</h1>`+
         `<header class="billing-period">`+
           `<span>Professional Services for billing period:</span>`+
@@ -780,9 +1254,23 @@
           tr.className=kind||'item';
           tr.dataset.key=key;
           const labelCell=document.createElement('td');
-          labelCell.className='description';
-          labelCell.textContent=label;
-          if(note) labelCell.title=note;
+          const linkable=canLinkRow(kind,key);
+          labelCell.className='description'+(linkable?' linkable':'');
+          if(linkable){
+            const handle=document.createElement('button');
+            handle.type='button';
+            handle.className='task-link-handle';
+            handle.title='Drag to the task this was billed to';
+            handle.setAttribute('aria-label','Drag from '+taskShortLabel(key)+' to the task this was billed to');
+            const text=document.createElement('span');
+            text.className='task-label';
+            text.textContent=label;
+            if(note) text.title=note;
+            labelCell.append(handle,text);
+          }else{
+            labelCell.textContent=label;
+            if(note) labelCell.title=note;
+          }
           tr.appendChild(labelCell);
           const vals=invoice.values[key];
           [contract,...vals].forEach((value,i)=>{
@@ -796,17 +1284,18 @@
               td.classList.add('same-col');
               td.title=sameTitle;
             }
+            if(i===4 && prev && prev.values && prev.values[key]){
+              const prior=parseMoneyNumber(value);
+              const prevTotal=parseMoneyNumber(prev.values[key][1]);
+              if(prior!=null && prevTotal!=null && prior!==prevTotal){
+                td.classList.add('prior-mismatch');
+                td.title='Invoice #'+invoice.number+' Prior billed '+value+' does not match Invoice #'+prev.number+' Total billed '+prev.values[key][1];
+              }
+            }
             tr.appendChild(td);
           });
           const billedNow=moneyActive(vals[4]);
-          const isTaskRow=!kind;
-          if(isTaskRow){
-            tr.appendChild(reasonCell(invoice.number,key,billedNow,'Why is this billed?'));
-          }else{
-            const empty=document.createElement('td');
-            empty.className='reason';
-            tr.appendChild(empty);
-          }
+          tr.appendChild(reasonCell(invoice.number,key,true,(kind!=='subtotal'&&billedNow)?'Why is this billed?':''));
         }
         tbody.appendChild(tr);
       }
@@ -830,6 +1319,7 @@
         tr.appendChild(reasonCell(invoice.number,'concern:'+concern.id,true,'PM comment on this concern'));
         tbody.appendChild(tr);
       });
+      bindTaskLinks(article,invoice.number);
       return article;
     }
 
@@ -868,6 +1358,10 @@
       }
       updateNav(shown);
       updateHistoryButtons();
+      requestAnimationFrame(()=>{
+        syncAlignedRows();
+        document.querySelectorAll('.invoice-page').forEach(paintInvoiceLinks);
+      });
     }
 
     prevBtn.addEventListener('click',()=>{if(prevBtn.disabled||startIndex<=0)return;startIndex-=1;render()});
@@ -889,9 +1383,28 @@
     scheduleDateTick();
     render();
 
+    function syncAlignedRows(){
+      const tables=[...document.querySelectorAll('.invoice-page tbody, .progress-page tbody')];
+      if(tables.length<2) return;
+      const shared=rows.length;
+      for(let i=0;i<shared;i++){
+        const group=tables.map(table=>table.rows[i]).filter(Boolean);
+        group.forEach(tr=>{
+          tr.style.height='';
+          [...tr.cells].forEach(td=>{td.style.height='';td.style.maxHeight=''});
+        });
+        const height=Math.max(...group.map(tr=>tr.getBoundingClientRect().height));
+        group.forEach(tr=>{tr.style.height=height+'px'});
+      }
+    }
+    window.addEventListener('resize',()=>{
+      syncAlignedRows();
+      document.querySelectorAll('.invoice-page').forEach(paintInvoiceLinks);
+    });
     const shell=document.querySelector('.comparison-shell');
     shell.addEventListener('pointerover',e=>{
-      if(e.target.closest('textarea,input,button,select')) return;
+      if(document.querySelector('.invoice-page.linking')) return;
+      if(e.target.closest('textarea,input,button,select,.arrow-note')) return;
       const tr=e.target.closest('tr[data-key]');
       if(!tr) return;
       const key=tr.dataset.key;
