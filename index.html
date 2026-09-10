@@ -248,7 +248,7 @@
           <span class="legend-sep">·</span>
           <span><i class="swatch" style="background:var(--resolved)"></i> Resolved</span>
           <span class="legend-sep">·</span>
-          <span>Drag a task’s dot to the billed-to task, including on the other invoice; click a crossing line to show it over the invoices; Open/Close the arrow note</span>
+          <span>Drag a task’s dot to the billed-to task, including on the other invoice; click a crossing line to show it over the invoices; Open/Close the arrow note. Arrows stay in this browser (Save progress does not copy them to GitHub)</span>
         </span>
       </p>
       <div class="notes" id="source-notes"></div>
@@ -587,7 +587,18 @@
     const PAIR=2;
     try{localStorage.removeItem('invoice-tracking-imported-v1')}catch(e){}
     const ordered=invoices.slice().sort((a,b)=>a.number-b.number);
-    let startIndex=Math.max(0,ordered.length-1);
+    const START_KEY='invoice-tracking-start-v1';
+    function loadStartIndex(){
+      try{
+        const n=Number(localStorage.getItem(START_KEY));
+        if(Number.isInteger(n)&&n>=0) return n;
+      }catch(e){}
+      return Math.max(0,ordered.length-1);
+    }
+    let startIndex=loadStartIndex();
+    function persistStartIndex(){
+      try{localStorage.setItem(START_KEY,String(startIndex))}catch(e){}
+    }
     const DEFAULT_REVIEW_NOTES=[
       {id:'rn-1',text:'Invoice 6 (January 1–31, 2026, invoice 26-7379) is copied from the printed billing table.'},
       {id:'rn-2',text:'Invoice 6 Stage subtotals equal the sum of their tasks. Remaining equals contract minus Total Billed. Prior + Current equals Total Billed.'},
@@ -703,7 +714,41 @@
       }
       return out;
     }
-    let billLinks=(()=>{try{return normalizeLinks(JSON.parse(localStorage.getItem(LINKS_KEY)||'{}'))}catch(e){return {}}})();
+    const BUILT_IN_BILL_LINKS={
+      7:[{id:'lnk-mtutnd69gvc',from:'1.3',to:'1.5',fromInvoice:'7',toInvoice:'7',note:'holis work',open:false,raised:false}],
+      8:[
+        {id:'lnk-mtumdigqb52',from:'1.3',to:'cont',fromInvoice:'8',toInvoice:'8',note:'In April, an additional 6.75 hours were spent on this task, which we are billing to the project contingency with DPP\u2019s authorization.',open:false,raised:false},
+        {id:'lnk-mtume4oz5yw',from:'3.4',to:'cont',fromInvoice:'8',toInvoice:'8',note:'Excess hours were previously billed to Task 2.1, as noted in the last progress report. In April, an additional 3.75 hours were spent on this task, which we are billing to the project contingency with DPP\u2019s authorization.',open:false,raised:false},
+        {id:'lnk-mtuw57qv8ok',from:'1.3',to:'cont',fromInvoice:'8',toInvoice:'9',note:'see notes 1.75 hours left out, made up this month',open:false,raised:false}
+      ],
+      9:[{id:'lnk-mtum7px8bc2',from:'1.5',to:'3.3',fromInvoice:'9',toInvoice:'9',note:'Alta note: required more effort. Not to do that in the future.',open:false,raised:false}]
+    };
+    function mergeLinkMaps(base,overlay){
+      const byId=new Map();
+      const order=[];
+      function add(map){
+        if(!map||typeof map!=='object') return;
+        for(const [storedOn,list] of Object.entries(map)){
+          if(!Array.isArray(list)) continue;
+          list.forEach(item=>{
+            if(!item||!item.id) return;
+            if(!byId.has(item.id)) order.push(item.id);
+            byId.set(item.id,Object.assign({},item,{fromInvoice:String(item.fromInvoice||storedOn)}));
+          });
+        }
+      }
+      add(base);
+      add(overlay);
+      const out={};
+      order.forEach(id=>{
+        const item=byId.get(id);
+        const storedOn=String(item.fromInvoice||'');
+        if(!out[storedOn]) out[storedOn]=[];
+        out[storedOn].push(item);
+      });
+      return out;
+    }
+    let billLinks=mergeLinkMaps(normalizeLinks(BUILT_IN_BILL_LINKS),(()=>{try{return normalizeLinks(JSON.parse(localStorage.getItem(LINKS_KEY)||'{}'))}catch(e){return {}}})());
     function persistLinks(){localStorage.setItem(LINKS_KEY,JSON.stringify(billLinks))}
     function linksFor(invoiceNumber){
       const key=String(invoiceNumber);
@@ -955,6 +1000,37 @@
         layer.appendChild(note);
       });
     }
+    function paintCrossStub(svg,layer,link,storedOn,article,handle,isFrom,index){
+      const ends=linkEnds(link,storedOn);
+      const other=Number(isFrom?ends.toInvoice:ends.fromInvoice);
+      const mine=Number(article.dataset.invoiceNumber);
+      const point=handlePoint(grid,handle);
+      const box=article.getBoundingClientRect();
+      const gridBox=grid.getBoundingClientRect();
+      const otherIsRight=other>mine;
+      const edgeX=otherIsRight?(box.right-gridBox.left-6):(box.left-gridBox.left+6);
+      const start=isFrom?point:{x:edgeX,y:point.y};
+      const end=isFrom?{x:edgeX,y:point.y}:point;
+      const d=`M${start.x.toFixed(1)},${start.y.toFixed(1)} L${end.x.toFixed(1)},${end.y.toFixed(1)}`;
+      const hit=document.createElementNS('http://www.w3.org/2000/svg','path');
+      hit.setAttribute('class','task-arrow-hit');
+      hit.setAttribute('d',d);
+      const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('class','task-arrow-path is-cross');
+      path.setAttribute('d',d);
+      path.setAttribute('marker-start','url(#board-arrow-out)');
+      path.setAttribute('marker-end','url(#board-arrowhead)');
+      const title=document.createElementNS('http://www.w3.org/2000/svg','title');
+      title.textContent=linkPhrase(link,storedOn)+'. Use the header arrows to show both invoices.';
+      path.appendChild(title);
+      svg.append(hit,path);
+      const note=document.createElement('div');
+      note.className='arrow-note'+(link.open?' open':'');
+      note.style.left=((start.x+end.x)/2)+'px';
+      note.style.top=(point.y+(index%2?8:-8))+'px';
+      fillArrowNote(note,link,storedOn);
+      layer.appendChild(note);
+    }
     function paintBoardLinks(){
       const svg=boardSvg();
       const layer=boardNotes();
@@ -966,7 +1042,7 @@
       addArrowMarker(defs,'board-arrowhead',7);
       svg.appendChild(defs);
       const visible=visibleInvoiceArticles();
-      if(visible.size<2) return;
+      if(!visible.size) return;
       let crossIndex=0;
       for(const [storedOn,list] of Object.entries(billLinks)){
         if(!Array.isArray(list)) continue;
@@ -975,44 +1051,54 @@
           const ends=linkEnds(link,storedOn);
           const fromArticle=visible.get(ends.fromInvoice);
           const toArticle=visible.get(ends.toInvoice);
-          if(!fromArticle||!toArticle) return;
-          const fromHandle=fromArticle.querySelector(`tr[data-key="${link.from}"] .task-link-handle`);
-          const toHandle=toArticle.querySelector(`tr[data-key="${link.to}"] .task-link-handle`);
-          if(!fromHandle||!toHandle) return;
-          const from=handlePoint(grid,fromHandle);
-          const to=handlePoint(grid,toHandle);
-          const midX=corridorX(fromArticle,toArticle);
-          const raised=!!(paintLinksPrint||link.open||link.raised);
-          const d=crossElbowPath(from.x,from.y,to.x,to.y,midX);
-          const clip=raised?'':makeCrossClip(svg,link,fromArticle,toArticle,fromHandle,toHandle);
-          const hit=document.createElementNS('http://www.w3.org/2000/svg','path');
-          hit.setAttribute('class','task-arrow-hit');
-          hit.setAttribute('d',d);
-          if(clip) hit.setAttribute('clip-path',clip);
-          const path=document.createElementNS('http://www.w3.org/2000/svg','path');
-          path.setAttribute('class','task-arrow-path is-cross'+(raised?' is-cross-raised':''));
-          path.setAttribute('d',d);
-          path.setAttribute('marker-start','url(#board-arrow-out)');
-          path.setAttribute('marker-end','url(#board-arrowhead)');
-          if(clip) path.setAttribute('clip-path',clip);
-          const title=document.createElementNS('http://www.w3.org/2000/svg','title');
-          title.textContent=raised?'Click to tuck this arrow under the invoices':'Click to show this arrow over the invoices';
-          path.appendChild(title);
-          function toggleRaised(){
-            if(link.open) return;
-            updateBillLink(storedOn,link.id,{raised:!link.raised});
-            paintAllLinks();
+          const fromHandle=fromArticle&&fromArticle.querySelector(`tr[data-key="${link.from}"] .task-link-handle`);
+          const toHandle=toArticle&&toArticle.querySelector(`tr[data-key="${link.to}"] .task-link-handle`);
+          if(fromArticle&&toArticle&&fromHandle&&toHandle){
+            const from=handlePoint(grid,fromHandle);
+            const to=handlePoint(grid,toHandle);
+            const midX=corridorX(fromArticle,toArticle);
+            const raised=!!(paintLinksPrint||link.open||link.raised);
+            const d=crossElbowPath(from.x,from.y,to.x,to.y,midX);
+            const clip=raised?'':makeCrossClip(svg,link,fromArticle,toArticle,fromHandle,toHandle);
+            const hit=document.createElementNS('http://www.w3.org/2000/svg','path');
+            hit.setAttribute('class','task-arrow-hit');
+            hit.setAttribute('d',d);
+            if(clip) hit.setAttribute('clip-path',clip);
+            const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+            path.setAttribute('class','task-arrow-path is-cross'+(raised?' is-cross-raised':''));
+            path.setAttribute('d',d);
+            path.setAttribute('marker-start','url(#board-arrow-out)');
+            path.setAttribute('marker-end','url(#board-arrowhead)');
+            if(clip) path.setAttribute('clip-path',clip);
+            const title=document.createElementNS('http://www.w3.org/2000/svg','title');
+            title.textContent=raised?'Click to tuck this arrow under the invoices':'Click to show this arrow over the invoices';
+            path.appendChild(title);
+            function toggleRaised(){
+              if(link.open) return;
+              updateBillLink(storedOn,link.id,{raised:!link.raised});
+              paintAllLinks();
+            }
+            hit.addEventListener('click',toggleRaised);
+            path.addEventListener('click',toggleRaised);
+            svg.append(hit,path);
+            const note=document.createElement('div');
+            note.className='arrow-note'+(link.open?' open':'');
+            note.style.left=midX+'px';
+            note.style.top=((from.y+to.y)/2+(crossIndex%2?8:-8))+'px';
+            fillArrowNote(note,link,storedOn);
+            layer.appendChild(note);
+            crossIndex+=1;
+            return;
           }
-          hit.addEventListener('click',toggleRaised);
-          path.addEventListener('click',toggleRaised);
-          svg.append(hit,path);
-          const note=document.createElement('div');
-          note.className='arrow-note'+(link.open?' open':'');
-          note.style.left=midX+'px';
-          note.style.top=((from.y+to.y)/2+(crossIndex%2?8:-8))+'px';
-          fillArrowNote(note,link,storedOn);
-          layer.appendChild(note);
-          crossIndex+=1;
+          if(fromArticle&&fromHandle){
+            paintCrossStub(svg,layer,link,storedOn,fromArticle,fromHandle,true,crossIndex);
+            crossIndex+=1;
+            return;
+          }
+          if(toArticle&&toHandle){
+            paintCrossStub(svg,layer,link,storedOn,toArticle,toHandle,false,crossIndex);
+            crossIndex+=1;
+          }
         });
       }
     }
@@ -1738,6 +1824,7 @@
         });
       }
       mountBoardLayers();
+      persistStartIndex();
       updateNav(shown);
       updateHistoryButtons();
       requestAnimationFrame(()=>{
