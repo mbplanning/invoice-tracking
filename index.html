@@ -65,9 +65,15 @@
     .nav-arrow:not(:disabled):hover{background:#f2f2f2}
     .nav-arrow:not(:disabled):focus-visible{outline:2px solid var(--ink);outline-offset:2px}
     .nav-arrow:disabled{color:#8a8a8a;border-color:#b0b0b0;background:#fafafa;box-shadow:none;cursor:not-allowed}
-    .comparison-grid{display:grid;grid-template-columns:repeat(var(--invoice-count),var(--panel));gap:8px;width:max-content}
+    .comparison-grid{position:relative;display:grid;grid-template-columns:repeat(var(--invoice-count),var(--panel));gap:8px;width:max-content}
     .comparison-grid.progress-view{gap:0;grid-template-columns:var(--panel) auto}
-    .progress-stack{display:flex;flex-direction:column;min-width:0;padding:8px 8px 12px;background:var(--paper);box-shadow:0 2px 12px rgba(0,0,0,.1)}
+    .comparison-grid.linking{cursor:crosshair}
+    .board-arrows,.board-arrow-notes{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:8}
+    .board-arrow-notes{z-index:9}
+    .comparison-grid.linking .board-arrows path,
+    .comparison-grid.linking .board-arrow-notes,
+    .comparison-grid.linking .board-arrow-notes *{pointer-events:none}
+    .progress-stack{position:relative;z-index:2;display:flex;flex-direction:column;min-width:0;padding:8px 8px 12px;background:var(--paper);box-shadow:0 2px 12px rgba(0,0,0,.1)}
     .progress-sheets{display:flex;align-items:flex-start;gap:8px}
     .progress-page{position:relative;width:var(--progress);min-width:var(--progress);padding:0;background:transparent;box-shadow:none}
     .progress-page + .progress-page{border-left:1px solid #d0d0d0;padding-left:8px}
@@ -92,10 +98,13 @@
     tr.summary td.progress-note textarea{height:16px;min-height:16px;max-height:16px}
     td.progress-note textarea:focus{outline:1px solid var(--ink);border-color:var(--ink)}
     td.progress-note textarea.comment-expanded{min-height:72px;max-height:none;overflow-y:auto}
-    .invoice-page{position:relative;min-width:0;padding:8px 8px 12px 42px;background:var(--paper);box-shadow:0 2px 12px rgba(0,0,0,.1)}
+    .invoice-page{position:relative;z-index:2;min-width:0;padding:8px 8px 12px 42px;background:var(--paper);box-shadow:0 2px 12px rgba(0,0,0,.1)}
     .task-arrows{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2}
     .task-arrow-path{fill:none;stroke:#1a4a8a;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
-    .task-arrow-preview{fill:none;stroke:#1a4a8a;stroke-width:1.6;stroke-dasharray:4 3;stroke-linejoin:round;stroke-linecap:round}
+    .task-arrow-path.is-cross{pointer-events:stroke;cursor:pointer}
+    .task-arrow-path.is-cross-raised{stroke-width:2}
+    .task-arrow-hit{fill:none;stroke:transparent;stroke-width:14;pointer-events:stroke;cursor:pointer}
+    .task-arrow-preview{fill:none;stroke:#1a4a8a;stroke-width:1.6;stroke-dasharray:4 3;stroke-linejoin:round;stroke-linecap:round;pointer-events:none}
     .task-arrow-notes{position:absolute;inset:0;pointer-events:none;z-index:3}
     .arrow-note{pointer-events:auto;position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;max-width:210px}
     .arrow-note-toggle,.arrow-note-remove{height:18px;padding:0 7px;border:1px solid #1a4a8a;background:#eef3fb;color:#1a4a8a;font:inherit;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap}
@@ -105,9 +114,9 @@
     .arrow-note.open textarea.comment-expanded{min-height:96px;max-height:none}
     .arrow-note-actions{display:flex;gap:4px;width:100%;justify-content:flex-end}
     .arrow-note-remove{border-color:#8a8a8a;background:#fafafa;color:#444}
-    .invoice-page.linking{cursor:crosshair}
-    .invoice-page.linking tr.link-source td{box-shadow:inset 0 0 0 1px #1a4a8a}
-    .invoice-page.linking tr.link-target td{background:#e7f0ff}
+    .invoice-page.linking,.comparison-grid.linking{cursor:crosshair}
+    .invoice-page.linking tr.link-source td,.comparison-grid.linking tr.link-source td{box-shadow:inset 0 0 0 1px #1a4a8a}
+    .invoice-page.linking tr.link-target td,.comparison-grid.linking tr.link-target td{background:#e7f0ff}
     td.description.linkable{display:flex;align-items:flex-start;gap:4px;overflow:visible}
     td.description .task-label{min-width:0;overflow:visible;white-space:normal;text-overflow:clip;line-height:1.25}
     .task-link-handle{flex:0 0 8px;width:8px;height:14px;margin-top:2px;padding:0;border:0;background:transparent;cursor:grab;touch-action:none;position:relative}
@@ -180,7 +189,7 @@
       .page-inner{width:100% !important;min-width:0 !important;margin:0}
       .page-header,.toolbar,.legend,.notes{width:100% !important;min-width:0 !important}
       .notes,.legend{break-inside:avoid;margin-left:0}
-      .toolbar .tool-btn,.save-status,.nav-arrow,.progress-head,.progress-delete,.review-note-delete,.task-link-handle{display:none}
+      .toolbar .tool-btn,.save-status,.nav-arrow,.progress-head,.progress-delete,.review-note-delete,.task-link-handle,.task-arrow-hit{display:none}
       .page-header{display:block}
       .comparison-shell{width:100%;max-width:100%}
       .comparison-grid{width:100% !important;max-width:100%;gap:6px;grid-template-columns:1fr 1fr !important}
@@ -239,7 +248,7 @@
           <span class="legend-sep">·</span>
           <span><i class="swatch" style="background:var(--resolved)"></i> Resolved</span>
           <span class="legend-sep">·</span>
-          <span>Drag a task’s dot to the billed-to task; Open/Close the arrow note</span>
+          <span>Drag a task’s dot to the billed-to task, including on the other invoice; click a crossing line to show it over the invoices; Open/Close the arrow note</span>
         </span>
       </p>
       <div class="notes" id="source-notes"></div>
@@ -671,6 +680,7 @@
       persistConcerns();
     }
     const LINKS_KEY='invoice-tracking-bill-links-v1';
+    let paintLinksPrint=false;
     function normalizeLinks(saved){
       const out={};
       if(!saved||typeof saved!=='object'||Array.isArray(saved)) return out;
@@ -680,9 +690,16 @@
           id:item&&item.id?String(item.id):('lnk-'+Math.random().toString(36).slice(2,8)),
           from:item&&item.from!=null?String(item.from):'',
           to:item&&item.to!=null?String(item.to):'',
+          fromInvoice:item&&item.fromInvoice!=null?String(item.fromInvoice):String(key),
+          toInvoice:item&&item.toInvoice!=null?String(item.toInvoice):String(key),
           note:item&&typeof item.note==='string'?item.note:'',
-          open:!!(item&&item.open)
-        })).filter(item=>item.from&&item.to&&item.from!==item.to);
+          open:!!(item&&item.open),
+          raised:!!(item&&item.raised)
+        })).filter(item=>{
+          if(!item.from||!item.to) return false;
+          if(item.fromInvoice===item.toInvoice && item.from===item.to) return false;
+          return true;
+        });
       }
       return out;
     }
@@ -693,6 +710,16 @@
       if(!Array.isArray(billLinks[key])) billLinks[key]=[];
       return billLinks[key];
     }
+    function linkEnds(link,storedOn){
+      return {
+        fromInvoice:String(link.fromInvoice||storedOn),
+        toInvoice:String(link.toInvoice||storedOn)
+      };
+    }
+    function isCrossLink(link,storedOn){
+      const ends=linkEnds(link,storedOn);
+      return ends.fromInvoice!==ends.toInvoice;
+    }
     function taskShortLabel(key){
       const row=rows.find(item=>Array.isArray(item)&&item[0]===key);
       if(!row) return key;
@@ -700,15 +727,32 @@
       const cut=label.indexOf(':');
       return cut>0?label.slice(0,cut):label;
     }
+    function linkPhrase(link,storedOn){
+      const ends=linkEnds(link,storedOn);
+      if(ends.fromInvoice===ends.toInvoice){
+        return taskShortLabel(link.from)+' to '+taskShortLabel(link.to);
+      }
+      return 'Invoice #'+ends.fromInvoice+' '+taskShortLabel(link.from)+' to Invoice #'+ends.toInvoice+' '+taskShortLabel(link.to);
+    }
     function canLinkRow(kind,key){
       if(!kind) return true;
       return kind==='summary'&&(key==='get'||key==='reimb'||key==='cont');
     }
-    function addBillLink(invoiceNumber,from,to){
-      if(!from||!to||from===to) return;
-      const list=linksFor(invoiceNumber);
-      if(list.some(item=>item.from===from&&item.to===to)) return;
-      list.push({id:'lnk-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),from,to,note:'',open:true});
+    function addBillLink(fromInvoice,from,toInvoice,to){
+      fromInvoice=String(fromInvoice);
+      toInvoice=String(toInvoice);
+      if(!from||!to) return;
+      if(fromInvoice===toInvoice && from===to) return;
+      const list=linksFor(fromInvoice);
+      if(list.some(item=>{
+        const ends=linkEnds(item,fromInvoice);
+        return item.from===from && item.to===to && ends.fromInvoice===fromInvoice && ends.toInvoice===toInvoice;
+      })) return;
+      const cross=fromInvoice!==toInvoice;
+      list.push({
+        id:'lnk-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+        from,to,fromInvoice,toInvoice,note:'',open:true,raised:cross
+      });
       persistLinks();
     }
     function updateBillLink(invoiceNumber,id,patch){
@@ -721,12 +765,12 @@
       billLinks[String(invoiceNumber)]=linksFor(invoiceNumber).filter(item=>item.id!==id);
       persistLinks();
     }
-    function articlePoint(article,clientX,clientY){
-      const box=article.getBoundingClientRect();
+    function articlePoint(el,clientX,clientY){
+      const box=el.getBoundingClientRect();
       return {x:clientX-box.left,y:clientY-box.top};
     }
-    function handlePoint(article,handle){
-      const box=article.getBoundingClientRect();
+    function handlePoint(el,handle){
+      const box=el.getBoundingClientRect();
       const hit=handle.getBoundingClientRect();
       return {x:hit.left+hit.width/2-box.left,y:hit.top+hit.height/2-box.top};
     }
@@ -736,6 +780,10 @@
       const endX=tx-clear;
       const gx=Math.min(startX,endX)-gutter;
       return `M${startX.toFixed(1)},${sy.toFixed(1)} L${gx.toFixed(1)},${sy.toFixed(1)} L${gx.toFixed(1)},${ty.toFixed(1)} L${endX.toFixed(1)},${ty.toFixed(1)}`;
+    }
+    function crossElbowPath(sx,sy,tx,ty,midX){
+      const gx=midX;
+      return `M${sx.toFixed(1)},${sy.toFixed(1)} L${gx.toFixed(1)},${sy.toFixed(1)} L${gx.toFixed(1)},${ty.toFixed(1)} L${tx.toFixed(1)},${ty.toFixed(1)}`;
     }
     function addArrowMarker(defs,id,refX){
       const marker=document.createElementNS('http://www.w3.org/2000/svg','marker');
@@ -752,13 +800,123 @@
       marker.appendChild(tip);
       defs.appendChild(marker);
     }
-    function linkKeyFromPoint(article,clientX,clientY,fromKey){
+    function visibleInvoiceArticles(){
+      const map=new Map();
+      document.querySelectorAll('.invoice-page').forEach(article=>{
+        if(article.dataset.invoiceNumber) map.set(String(article.dataset.invoiceNumber),article);
+      });
+      return map;
+    }
+    function articlesLeftRight(a,b){
+      return a.getBoundingClientRect().left<=b.getBoundingClientRect().left?[a,b]:[b,a];
+    }
+    function corridorX(articleA,articleB){
+      const gridBox=grid.getBoundingClientRect();
+      const [left,right]=articlesLeftRight(articleA,articleB);
+      const l=left.getBoundingClientRect();
+      const r=right.getBoundingClientRect();
+      const lPadR=parseFloat(getComputedStyle(left).paddingRight)||8;
+      const rPadL=parseFloat(getComputedStyle(right).paddingLeft)||42;
+      return ((l.right-lPadR)+(r.left+rPadL))/2-gridBox.left;
+    }
+    function appendClipRect(clip,x,y,w,h){
+      const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+      rect.setAttribute('x',x.toFixed(1));
+      rect.setAttribute('y',y.toFixed(1));
+      rect.setAttribute('width',Math.max(1,w).toFixed(1));
+      rect.setAttribute('height',Math.max(1,h).toFixed(1));
+      clip.appendChild(rect);
+    }
+    function makeCrossClip(svg,link,fromArticle,toArticle,fromHandle,toHandle){
+      const clip=document.createElementNS('http://www.w3.org/2000/svg','clipPath');
+      clip.setAttribute('id','board-clip-'+link.id);
+      const gridBox=grid.getBoundingClientRect();
+      const [left,right]=articlesLeftRight(fromArticle,toArticle);
+      const l=left.getBoundingClientRect();
+      const r=right.getBoundingClientRect();
+      const lPadR=parseFloat(getComputedStyle(left).paddingRight)||8;
+      const rPadL=parseFloat(getComputedStyle(right).paddingLeft)||42;
+      const x=l.right-lPadR-gridBox.left;
+      const w=(r.left+rPadL-gridBox.left)-x;
+      const y=Math.min(l.top,r.top)-gridBox.top;
+      const h=Math.max(l.bottom,r.bottom)-Math.min(l.top,r.top);
+      appendClipRect(clip,x,y,w,h);
+      [fromHandle,toHandle].forEach(handle=>{
+        const hit=handle.getBoundingClientRect();
+        appendClipRect(clip,hit.left-gridBox.left-12,hit.top-gridBox.top-10,hit.width+24,hit.height+20);
+      });
+      svg.querySelector('defs').appendChild(clip);
+      return 'url(#board-clip-'+link.id+')';
+    }
+    function mountBoardLayers(){
+      const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('class','board-arrows');
+      svg.setAttribute('aria-hidden','true');
+      const layer=document.createElement('div');
+      layer.className='board-arrow-notes';
+      grid.append(svg,layer);
+    }
+    function boardSvg(){return grid.querySelector(':scope > .board-arrows')}
+    function boardNotes(){return grid.querySelector(':scope > .board-arrow-notes')}
+    function linkTargetFromPoint(clientX,clientY,fromInvoice,fromKey){
       const el=document.elementFromPoint(clientX,clientY);
-      if(!el||!article.contains(el)) return '';
+      if(!el) return null;
+      const article=el.closest('.invoice-page');
+      if(!article) return null;
       const tr=el.closest('tr[data-key]');
-      if(!tr||!article.contains(tr)||!tr.querySelector('.task-link-handle')) return '';
+      if(!tr||!article.contains(tr)||!tr.querySelector('.task-link-handle')) return null;
       const key=tr.dataset.key;
-      return key&&key!==fromKey?key:'';
+      const invoiceNumber=article.dataset.invoiceNumber;
+      if(!key||!invoiceNumber) return null;
+      if(String(invoiceNumber)===String(fromInvoice) && key===fromKey) return null;
+      return {invoiceNumber,key,article,tr};
+    }
+    function paintAllLinks(){
+      document.querySelectorAll('.invoice-page').forEach(paintInvoiceLinks);
+      paintBoardLinks();
+    }
+    function fillArrowNote(note,link,storedOn){
+      const phrase=linkPhrase(link,storedOn);
+      if(link.open){
+        const input=document.createElement('textarea');
+        input.placeholder='Note: billed '+phrase+'. When was this approved?';
+        input.setAttribute('aria-label','Billing arrow note from '+phrase);
+        input.value=link.note;
+        input.addEventListener('input',()=>{
+          updateBillLink(storedOn,link.id,{note:input.value});
+          if(input.classList.contains('comment-expanded')) expandComment(input);
+        });
+        bindExpandableComment(input);
+        const actions=document.createElement('div');
+        actions.className='arrow-note-actions';
+        const closeBtn=document.createElement('button');
+        closeBtn.type='button';
+        closeBtn.className='arrow-note-toggle';
+        closeBtn.textContent='Close';
+        closeBtn.addEventListener('click',()=>{
+          updateBillLink(storedOn,link.id,{open:false,raised:false});
+          paintAllLinks();
+        });
+        const removeBtn=document.createElement('button');
+        removeBtn.type='button';
+        removeBtn.className='arrow-note-remove';
+        removeBtn.textContent='Remove';
+        removeBtn.addEventListener('click',()=>{removeBillLink(storedOn,link.id);paintAllLinks()});
+        actions.append(closeBtn,removeBtn);
+        note.append(input,actions);
+      }else{
+        const openBtn=document.createElement('button');
+        openBtn.type='button';
+        openBtn.className='arrow-note-toggle';
+        openBtn.textContent='Open';
+        openBtn.title=link.note||('Billed '+phrase);
+        openBtn.setAttribute('aria-label','Open billing note from '+phrase);
+        openBtn.addEventListener('click',()=>{
+          updateBillLink(storedOn,link.id,{open:true,raised:isCrossLink(link,storedOn)});
+          paintAllLinks();
+        });
+        note.appendChild(openBtn);
+      }
     }
     function paintInvoiceLinks(article){
       const invoiceNumber=article.dataset.invoiceNumber;
@@ -775,6 +933,7 @@
       svg.appendChild(defs);
       layer.replaceChildren();
       linksFor(invoiceNumber).forEach((link,index)=>{
+        if(isCrossLink(link,invoiceNumber)) return;
         const fromHandle=article.querySelector(`tr[data-key="${link.from}"] .task-link-handle`);
         const toHandle=article.querySelector(`tr[data-key="${link.to}"] .task-link-handle`);
         if(!fromHandle||!toHandle) return;
@@ -790,78 +949,128 @@
         svg.appendChild(path);
         const note=document.createElement('div');
         note.className='arrow-note'+(link.open?' open':'');
-        note.style.left=link.open?(gx+'px'):(gx+'px');
+        note.style.left=gx+'px';
         note.style.top=((from.y+to.y)/2+(index%2?6:-6))+'px';
-        if(link.open){
-          const input=document.createElement('textarea');
-          input.placeholder='Note: billed '+taskShortLabel(link.from)+' to '+taskShortLabel(link.to)+'. When was this approved?';
-          input.setAttribute('aria-label','Billing arrow note from '+taskShortLabel(link.from)+' to '+taskShortLabel(link.to));
-          input.value=link.note;
-          input.addEventListener('input',()=>{
-            updateBillLink(invoiceNumber,link.id,{note:input.value});
-            if(input.classList.contains('comment-expanded')) expandComment(input);
-          });
-          bindExpandableComment(input);
-          const actions=document.createElement('div');
-          actions.className='arrow-note-actions';
-          const closeBtn=document.createElement('button');
-          closeBtn.type='button';
-          closeBtn.className='arrow-note-toggle';
-          closeBtn.textContent='Close';
-          closeBtn.addEventListener('click',()=>{updateBillLink(invoiceNumber,link.id,{open:false});paintInvoiceLinks(article)});
-          const removeBtn=document.createElement('button');
-          removeBtn.type='button';
-          removeBtn.className='arrow-note-remove';
-          removeBtn.textContent='Remove';
-          removeBtn.addEventListener('click',()=>{removeBillLink(invoiceNumber,link.id);paintInvoiceLinks(article)});
-          actions.append(closeBtn,removeBtn);
-          note.append(input,actions);
-        }else{
-          const openBtn=document.createElement('button');
-          openBtn.type='button';
-          openBtn.className='arrow-note-toggle';
-          openBtn.textContent='Open';
-          openBtn.title=link.note||('Billed '+taskShortLabel(link.from)+' to '+taskShortLabel(link.to));
-          openBtn.setAttribute('aria-label','Open billing note from '+taskShortLabel(link.from)+' to '+taskShortLabel(link.to));
-          openBtn.addEventListener('click',()=>{updateBillLink(invoiceNumber,link.id,{open:true});paintInvoiceLinks(article)});
-          note.appendChild(openBtn);
-        }
+        fillArrowNote(note,link,invoiceNumber);
         layer.appendChild(note);
       });
     }
+    function paintBoardLinks(){
+      const svg=boardSvg();
+      const layer=boardNotes();
+      if(!svg||!layer) return;
+      svg.replaceChildren();
+      layer.replaceChildren();
+      const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+      addArrowMarker(defs,'board-arrow-out',0.5);
+      addArrowMarker(defs,'board-arrowhead',7);
+      svg.appendChild(defs);
+      const visible=visibleInvoiceArticles();
+      if(visible.size<2) return;
+      let crossIndex=0;
+      for(const [storedOn,list] of Object.entries(billLinks)){
+        if(!Array.isArray(list)) continue;
+        list.forEach(link=>{
+          if(!isCrossLink(link,storedOn)) return;
+          const ends=linkEnds(link,storedOn);
+          const fromArticle=visible.get(ends.fromInvoice);
+          const toArticle=visible.get(ends.toInvoice);
+          if(!fromArticle||!toArticle) return;
+          const fromHandle=fromArticle.querySelector(`tr[data-key="${link.from}"] .task-link-handle`);
+          const toHandle=toArticle.querySelector(`tr[data-key="${link.to}"] .task-link-handle`);
+          if(!fromHandle||!toHandle) return;
+          const from=handlePoint(grid,fromHandle);
+          const to=handlePoint(grid,toHandle);
+          const midX=corridorX(fromArticle,toArticle);
+          const raised=!!(paintLinksPrint||link.open||link.raised);
+          const d=crossElbowPath(from.x,from.y,to.x,to.y,midX);
+          const clip=raised?'':makeCrossClip(svg,link,fromArticle,toArticle,fromHandle,toHandle);
+          const hit=document.createElementNS('http://www.w3.org/2000/svg','path');
+          hit.setAttribute('class','task-arrow-hit');
+          hit.setAttribute('d',d);
+          if(clip) hit.setAttribute('clip-path',clip);
+          const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+          path.setAttribute('class','task-arrow-path is-cross'+(raised?' is-cross-raised':''));
+          path.setAttribute('d',d);
+          path.setAttribute('marker-start','url(#board-arrow-out)');
+          path.setAttribute('marker-end','url(#board-arrowhead)');
+          if(clip) path.setAttribute('clip-path',clip);
+          const title=document.createElementNS('http://www.w3.org/2000/svg','title');
+          title.textContent=raised?'Click to tuck this arrow under the invoices':'Click to show this arrow over the invoices';
+          path.appendChild(title);
+          function toggleRaised(){
+            if(link.open) return;
+            updateBillLink(storedOn,link.id,{raised:!link.raised});
+            paintAllLinks();
+          }
+          hit.addEventListener('click',toggleRaised);
+          path.addEventListener('click',toggleRaised);
+          svg.append(hit,path);
+          const note=document.createElement('div');
+          note.className='arrow-note'+(link.open?' open':'');
+          note.style.left=midX+'px';
+          note.style.top=((from.y+to.y)/2+(crossIndex%2?8:-8))+'px';
+          fillArrowNote(note,link,storedOn);
+          layer.appendChild(note);
+          crossIndex+=1;
+        });
+      }
+    }
+    function otherInvoiceAt(clientX,clientY,fromArticle){
+      for(const page of document.querySelectorAll('.invoice-page')){
+        if(page===fromArticle) continue;
+        const box=page.getBoundingClientRect();
+        if(clientX>=box.left && clientX<=box.right && clientY>=box.top && clientY<=box.bottom) return page;
+      }
+      return null;
+    }
     function startLinkDrag(article,invoiceNumber,handle,event){
       const fromKey=handle.closest('tr').dataset.key;
-      const start=handlePoint(article,handle);
-      article.classList.add('linking');
+      const start=handlePoint(grid,handle);
+      grid.classList.add('linking');
+      document.querySelectorAll('.invoice-page').forEach(page=>page.classList.add('linking'));
       handle.closest('tr').classList.add('link-source');
-      const svg=article.querySelector('.task-arrows');
+      const svg=boardSvg()||article.querySelector('.task-arrows');
+      if(!svg.querySelector('#board-arrow-out')){
+        const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+        addArrowMarker(defs,'board-arrow-out',0.5);
+        addArrowMarker(defs,'board-arrowhead',7);
+        svg.prepend(defs);
+      }
       const preview=document.createElementNS('http://www.w3.org/2000/svg','path');
       preview.setAttribute('class','task-arrow-preview');
-      preview.setAttribute('marker-start','url(#task-arrow-out-'+invoiceNumber+')');
-      preview.setAttribute('marker-end','url(#task-arrowhead-'+invoiceNumber+')');
+      preview.setAttribute('marker-start','url(#board-arrow-out)');
+      preview.setAttribute('marker-end','url(#board-arrowhead)');
       svg.appendChild(preview);
       let lastTarget=null;
-      function highlight(key){
+      function highlight(target){
         if(lastTarget) lastTarget.classList.remove('link-target');
-        lastTarget=key?article.querySelector(`tr[data-key="${key}"]`):null;
+        lastTarget=target?target.tr:null;
         if(lastTarget) lastTarget.classList.add('link-target');
       }
       function move(ev){
-        const point=articlePoint(article,ev.clientX,ev.clientY);
-        preview.setAttribute('d',elbowPath(start.x,start.y,point.x,point.y,16));
-        highlight(linkKeyFromPoint(article,ev.clientX,ev.clientY,fromKey));
+        const point=articlePoint(grid,ev.clientX,ev.clientY);
+        const target=linkTargetFromPoint(ev.clientX,ev.clientY,invoiceNumber,fromKey);
+        const other=target&&String(target.invoiceNumber)!==String(invoiceNumber)?target.article:otherInvoiceAt(ev.clientX,ev.clientY,article);
+        if(other){
+          preview.setAttribute('d',crossElbowPath(start.x,start.y,point.x,point.y,corridorX(article,other)));
+        }else{
+          preview.setAttribute('d',elbowPath(start.x,start.y,point.x,point.y,16));
+        }
+        highlight(target);
       }
       function end(ev){
         window.removeEventListener('pointermove',move);
         window.removeEventListener('pointerup',end);
         preview.remove();
-        article.classList.remove('linking');
-        article.querySelectorAll('.link-source,.link-target').forEach(el=>el.classList.remove('link-source','link-target'));
+        grid.classList.remove('linking');
+        document.querySelectorAll('.invoice-page').forEach(page=>page.classList.remove('linking'));
+        document.querySelectorAll('.link-source,.link-target').forEach(el=>el.classList.remove('link-source','link-target'));
         const moved=Math.hypot(ev.clientX-event.clientX,ev.clientY-event.clientY)>4;
-        const toKey=moved?linkKeyFromPoint(article,ev.clientX,ev.clientY,fromKey):'';
-        if(toKey){
-          addBillLink(invoiceNumber,fromKey,toKey);
-          paintInvoiceLinks(article);
+        const target=moved?linkTargetFromPoint(ev.clientX,ev.clientY,invoiceNumber,fromKey):null;
+        if(target){
+          addBillLink(invoiceNumber,fromKey,target.invoiceNumber,target.key);
+          paintAllLinks();
         }
       }
       window.addEventListener('pointermove',move);
@@ -875,7 +1084,6 @@
         event.preventDefault();
         startLinkDrag(article,invoiceNumber,handle,event);
       });
-      paintInvoiceLinks(article);
     }
     function setReason(invoiceNumber,rowKey,value){
       const k=reasonStoreKey(invoiceNumber,rowKey);
@@ -971,7 +1179,7 @@
       requestAnimationFrame(()=>{
         syncAlignedRows();
         if(el&&el.closest('.arrow-note')) return;
-        document.querySelectorAll('.invoice-page').forEach(paintInvoiceLinks);
+        paintAllLinks();
       });
     }
     function collapseComment(el){
@@ -1416,8 +1624,8 @@
             const handle=document.createElement('button');
             handle.type='button';
             handle.className='task-link-handle';
-            handle.title='Drag to the task this was billed to';
-            handle.setAttribute('aria-label','Drag from '+taskShortLabel(key)+' to the task this was billed to');
+            handle.title='Drag to the billed-to task, on this invoice or the other';
+            handle.setAttribute('aria-label','Drag from '+taskShortLabel(key)+' to the billed-to task on this invoice or the other');
             const text=document.createElement('span');
             text.className='task-label';
             text.textContent=label;
@@ -1529,12 +1737,13 @@
           grid.appendChild(renderInvoice(invoice,prevInvoice,index===0,index!==0));
         });
       }
+      mountBoardLayers();
       updateNav(shown);
       updateHistoryButtons();
       requestAnimationFrame(()=>{
         document.querySelectorAll('tr.concern textarea').forEach(autosizeConcern);
         syncAlignedRows();
-        document.querySelectorAll('.invoice-page').forEach(paintInvoiceLinks);
+        paintAllLinks();
       });
     }
 
@@ -1578,7 +1787,15 @@
     }
     window.addEventListener('resize',()=>{
       syncAlignedRows();
-      document.querySelectorAll('.invoice-page').forEach(paintInvoiceLinks);
+      paintAllLinks();
+    });
+    window.addEventListener('beforeprint',()=>{
+      paintLinksPrint=true;
+      paintAllLinks();
+    });
+    window.addEventListener('afterprint',()=>{
+      paintLinksPrint=false;
+      paintAllLinks();
     });
     const shell=document.querySelector('.comparison-shell');
     shell.addEventListener('pointerover',e=>{
